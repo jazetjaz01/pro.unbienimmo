@@ -153,7 +153,7 @@ export default function Step3Page() {
        <p className="text-sm text-gray-600 leading-relaxed max-w-md">
     À cette étape, il convient de saisir l'adresse du bien. 
     Vous pouvez choisir ci-dessous de présenter votre bien de façon exacte 
-    sur une carte ou dans un rayon de 500 mètres.
+    sur une carte ou dans un rayon de 500 mètres de façon aléatoire.
   </p>
       </div>
 
