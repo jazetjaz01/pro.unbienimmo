@@ -26,7 +26,8 @@ export default function Step2Page() {
     rent_charges: '',
     surface_area_m2: '',
     room_count: '',
-    bedroom_count: ''
+    bedroom_count: '',
+    bathroom_count: '' // Ajouté
   })
 
   const isRental = listing?.transaction_type === 'location'
@@ -41,7 +42,8 @@ export default function Step2Page() {
         rent_charges: listing.rent_charges?.toString() || '',
         surface_area_m2: listing.surface_area_m2?.toString() || '',
         room_count: listing.room_count?.toString() || '',
-        bedroom_count: listing.bedroom_count?.toString() || ''
+        bedroom_count: listing.bedroom_count?.toString() || '',
+        bathroom_count: listing.bathroom_count?.toString() || '' // Ajouté
       })
     }
   }, [listing])
@@ -58,6 +60,7 @@ export default function Step2Page() {
         surface_area_m2: localData.surface_area_m2 ? Number(localData.surface_area_m2) : null,
         room_count: localData.room_count ? Number(localData.room_count) : null,
         bedroom_count: localData.bedroom_count ? Number(localData.bedroom_count) : null,
+        bathroom_count: localData.bathroom_count ? Number(localData.bathroom_count) : null, // Ajouté
         step_completed: 2
       }
 
@@ -113,7 +116,6 @@ export default function Step2Page() {
         
         {!isRental && (
           <div className="space-y-6">
-            {/* 1. SAISIE DES MONTANTS */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-3">
                 <Label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Net Vendeur</Label>
@@ -143,13 +145,11 @@ export default function Step2Page() {
               </div>
             </div>
 
-            {/* 2. RÉCAPITULATIF PRIX TOTAL (FOND BLANC SHADOW) */}
             <div className="p-8 bg-white border border-gray-100 rounded-2xl shadow-sm">
                 <p className="text-xs text-gray-400 uppercase font-bold tracking-widest mb-1">Prix de vente FAI (Total)</p>
                 <p className="text-4xl font-black text-gray-900">{totalSalePrice.toLocaleString()} €</p>
             </div>
 
-            {/* 3. RÉPARTITION HONORAIRES */}
             <div className="space-y-4 pt-2">
               <Label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Honoraires à charge du</Label>
               <RadioGroup 
@@ -197,9 +197,9 @@ export default function Step2Page() {
           </div>
         )}
 
-        {/* SECTION CARACTÉRISTIQUES */}
+        {/* SECTION CARACTÉRISTIQUES MISE À JOUR */}
         <div className="space-y-6 pt-10 border-t border-gray-100">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-3">
                     <Label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Surface (m²)</Label>
                     <Input 
@@ -219,6 +219,26 @@ export default function Step2Page() {
                       onChange={(e) => setLocalData({...localData, room_count: e.target.value})} 
                       className={airbnbInput} 
                       placeholder="Ex: 4"
+                    />
+                </div>
+                <div className="space-y-3">
+                    <Label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Nb de chambres</Label>
+                    <Input 
+                      type="number" 
+                      value={localData.bedroom_count} 
+                      onChange={(e) => setLocalData({...localData, bedroom_count: e.target.value})} 
+                      className={airbnbInput} 
+                      placeholder="Ex: 2"
+                    />
+                </div>
+                <div className="space-y-3">
+                    <Label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Nb salle bain/douche</Label>
+                    <Input 
+                      type="number" 
+                      value={localData.bathroom_count} 
+                      onChange={(e) => setLocalData({...localData, bathroom_count: e.target.value})} 
+                      className={airbnbInput} 
+                      placeholder="Ex: 1"
                     />
                 </div>
             </div>
