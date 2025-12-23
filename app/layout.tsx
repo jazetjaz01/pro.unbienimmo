@@ -20,7 +20,7 @@ const sarina = Sarina({
 
 export const metadata: Metadata = {
   title: "pro.unbienimmo.com",
-  description: "Gérez votre activité sur unbienimmo.com",
+  description: "Gérez votre activité sur unbienimmo.com, diffusion d'annonces géolocalisées",
 };
 
 export default function RootLayout({
