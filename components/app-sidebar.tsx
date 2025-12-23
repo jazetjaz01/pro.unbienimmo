@@ -79,7 +79,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       items: [
         {
           title: "Mes annonces",
-          url: "/dashboard/listings",
+          url: "/dashboard/listings/board",
         },
         {
           title: "Créer une annonce",
