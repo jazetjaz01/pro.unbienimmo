@@ -12,7 +12,10 @@ const Navbar = () => {
       <div className="h-full flex items-center justify-between  mx-auto px-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-2">
             <Logo />
+            <div className="flex gap-0.5 ">
+            <span className=" text-xl  hidden md:block text-orange-600 font-bold">pro.</span>
             <span className="font-sarina text-lg  hidden md:block">unbienimmo</span>
+            </div>
           </Link>
         
 

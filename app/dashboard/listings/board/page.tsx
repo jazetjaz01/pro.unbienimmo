@@ -54,6 +54,9 @@ export default function MyListingsPage() {
   const [listings, setListings] = React.useState<ListingItem[]>([])
   const [loading, setLoading] = React.useState(true)
 
+  // URL de base pour le site public
+  const PUBLIC_SITE_URL = "https://www.unbienimmo.com"
+
   const fetchMyListings = React.useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -78,7 +81,6 @@ export default function MyListingsPage() {
     fetchMyListings()
   }, [fetchMyListings])
 
-  // --- ACTION : SUPPRIMER L'ANNONCE + RÉPERTOIRE IMAGES ---
   const deleteListing = async (id: number) => {
     const confirmDelete = window.confirm(
       "Supprimer définitivement cette annonce et TOUTES ses photos ? Cette action est irréversible."
@@ -87,30 +89,25 @@ export default function MyListingsPage() {
     if (!confirmDelete) return
 
     try {
-      // 1. Nettoyage du Bucket Storage
-      // On suppose que vos images sont dans un dossier nommé par l'ID de l'annonce
       const folderPath = `${id}` 
 
-      // Lister les fichiers présents dans le dossier
+      // 1. Nettoyage du Bucket Storage
       const { data: files, error: listError } = await supabase
         .storage
         .from('listings-images')
         .list(folderPath)
 
       if (!listError && files && files.length > 0) {
-        // Créer la liste des chemins complets à supprimer
         const filesToRemove = files.map((file) => `${folderPath}/${file.name}`)
-        
-        // Supprimer les fichiers du bucket
         const { error: storageError } = await supabase
           .storage
-          .from('listings')
+          .from('listings') // ne pos corriger ( le bucket s'appele bien listings)
           .remove(filesToRemove)
 
         if (storageError) console.error("Erreur Storage:", storageError.message)
       }
 
-      // 2. Suppression de la ligne en base de données
+      // 2. Suppression base de données
       const { error: dbError } = await supabase
         .from('listings')
         .delete()
@@ -151,7 +148,7 @@ export default function MyListingsPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-[400px]">
+      <div className="flex justify-center items-center min-h-100">
         <Loader2 className="h-8 w-8 animate-spin text-rose-500" />
       </div>
     )
@@ -164,7 +161,7 @@ export default function MyListingsPage() {
           <h1 className="text-3xl font-black tracking-tight text-slate-900 uppercase">Mes annonces</h1>
           <p className="text-slate-500 mt-1 text-sm font-medium">Gérez vos biens et vos mandats en temps réel.</p>
         </div>
-        <Link href="/dashboard/listings/new/edit/step-1">
+        <Link href="/dashboard/listings/edit/step-1">
           <Button className="flex items-center gap-2 rounded-2xl bg-slate-900 hover:bg-black shadow-xl h-12 px-6 transition-all active:scale-95">
             <Plus className="h-5 w-5" /> Nouvelle annonce
           </Button>
@@ -243,11 +240,18 @@ export default function MyListingsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl border-slate-100 shadow-2xl">
+                        {/* LIEN VERS SITE PUBLIC MODIFIÉ ICI */}
                         <DropdownMenuItem asChild className="rounded-xl py-2.5 font-bold">
-                          <Link href={`/listings/${listing.id}`} target="_blank">
+                          <a 
+                            href={`${PUBLIC_SITE_URL}/listings/${listing.id}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center w-full"
+                          >
                             <Eye className="mr-3 h-4 w-4" /> Voir l'annonce
-                          </Link>
+                          </a>
                         </DropdownMenuItem>
+                        
                         <DropdownMenuItem asChild className="rounded-xl py-2.5 font-bold">
                           <Link href={`/dashboard/listings/${listing.id}/edit/step-1`}>
                             <Edit3 className="mr-3 h-4 w-4" /> Modifier

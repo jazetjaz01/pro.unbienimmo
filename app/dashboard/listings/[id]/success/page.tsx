@@ -34,6 +34,9 @@ export default function ListingSuccessPage() {
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
 
+  // URL de base pour le site public (sans le "pro.")
+  const PUBLIC_SITE_URL = "https://www.unbienimmo.com"
+
   React.useEffect(() => {
     async function fetchListingDetails() {
       if (!params.id) return;
@@ -50,7 +53,7 @@ export default function ListingSuccessPage() {
             price, 
             property_type,
             professionals:professional_id ( name, email, phone )
-          `) // Correction : 'name' au lieu de 'first_name/last_name'
+          `)
           .eq('id', params.id)
           .single()
 
@@ -90,7 +93,7 @@ export default function ListingSuccessPage() {
   }
 
   return (
-    <div className="relative flex flex-col items-center justify-center min-h-[calc(100vh-80px)] p-6  text-center">
+    <div className="relative flex flex-col items-center justify-center min-h-[calc(100vh-80px)] p-6 text-center">
       
       <Confetti
         width={width}
@@ -133,13 +136,15 @@ export default function ListingSuccessPage() {
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button 
-            onClick={() => router.push(`/dashboard/listings`)}
+            onClick={() => router.push(`/dashboard`)}
             className="h-14 px-8 bg-slate-900 hover:bg-black text-white rounded-2xl text-lg font-bold transition-all flex items-center gap-2"
           >
             <Home className="h-5 w-5" /> Dashboard
           </Button>
+          
+          {/* BOUTON CORRIGÉ ICI POUR POINTER VERS WWW */}
           <Button 
-            onClick={() => window.open(`/listings/${listing.id}`, '_blank')}
+            onClick={() => window.open(`${PUBLIC_SITE_URL}/listings/${listing.id}`, '_blank')}
             variant="outline"
             className="h-14 px-8 border-2 border-slate-200 text-slate-900 hover:bg-slate-50 rounded-2xl text-lg font-bold transition-all flex items-center gap-2"
           >
