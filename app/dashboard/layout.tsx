@@ -23,7 +23,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Contenu principal */}
         <main className="flex-1 flex justify-center items-start p-4 md:p-10 w-full">
           {/* On laisse le formulaire gérer sa largeur max */}
-          <div className="w-full max-w-5xl flex flex-col items-center">
+          <div className="w-full max-w-6xl flex flex-col items-center">
             {children}
           </div>
         </main>

@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/navbar";
 import { ListingProvider } from '@/context/ListingContext';
 import { Toaster } from "sonner"; // Import du toaster pour tes notifications
+import Footer from "@/components/footer";
 
 const outfitSans = Outfit({
   variable: "--font-outfit-sans",
@@ -42,7 +43,8 @@ export default function RootLayout({
         <ListingProvider>
           <Navbar />
           {children}
-          <Toaster richColors position="top-right" />
+          <Footer />
+          <Toaster richColors position="bottom-right" />
         </ListingProvider>
       </body>
     </html>

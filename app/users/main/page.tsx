@@ -5,8 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { User, Mail, Phone, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Loader2, Check, AlertCircle, ArrowRight } from 'lucide-react'
 
 export default function UserProfilePage() {
   const supabase = createClient()
@@ -78,132 +77,132 @@ export default function UserProfilePage() {
     if (error) setError(error.message)
     else {
       setSuccess(true)
-      setTimeout(() => setSuccess(false), 5000) // Cache le message après 5s
+      setTimeout(() => setSuccess(false), 5000)
     }
     setSaving(false)
   }
 
+  const minimalInput = "rounded-none border-0 border-b border-gray-200 focus-visible:ring-0 focus-visible:border-gray-900 px-0 h-12 text-lg transition-colors bg-transparent shadow-none"
+
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center space-y-4">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        <p className="text-muted-foreground animate-pulse">Chargement de votre profil...</p>
+      <div className="flex h-[60vh] items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-gray-900" />
       </div>
     )
   }
 
   return (
-    <div className="w-full max-w-lg mx-auto">
-      <Card className="shadow-xl border-none bg-white/80 backdrop-blur-sm">
-        <CardHeader className="space-y-1">
-          <div className="flex justify-center mb-2">
-            <div className="p-3 bg-blue-50 rounded-full text-teal-600">
-              <User size={32} />
+    <div className="p-6 md:p-12 w-full max-w-5xl mx-auto bg-white min-h-screen font-sans">
+      
+      {/* HEADER EDITORIAL */}
+      <div className="mb-20 border-b border-gray-100 pb-8 text-left">
+        <p className="text-[10px] tracking-[0.3em] uppercase font-bold text-gray-400 mb-2">Compte Utilisateur</p>
+        <h1 className="text-4xl font-light tracking-tight text-gray-900 italic">Profil Principal</h1>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-24">
+        
+        {/* SECTION: IDENTITÉ */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-12">
+          <div className="md:col-span-1">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-2">Identité</h3>
+            <p className="text-xs text-gray-400 leading-relaxed italic">
+              "Vos informations officielles utilisées pour vos communications professionnelles."
+            </p>
+          </div>
+          
+          <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-10">
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Prénom</Label>
+              <Input
+                required
+                className={minimalInput}
+                value={form.first_name}
+                onChange={e => setForm({ ...form, first_name: e.target.value })}
+                placeholder="Ex: Jean"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Nom</Label>
+              <Input
+                required
+                className={minimalInput}
+                value={form.last_name}
+                onChange={e => setForm({ ...form, last_name: e.target.value })}
+                placeholder="Ex: Dupont"
+              />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold text-center tracking-tight">
-            Utilisateur principal
-          </CardTitle>
-          <CardDescription className="text-center text-slate-500">
-            Gérez vos informations personnelles et vos moyens de contact
-          </CardDescription>
-        </CardHeader>
-        
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+        </section>
+
+        {/* SECTION: CONTACT */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-12 border-t border-gray-50 pt-16">
+          <div className="md:col-span-1">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-2">Coordonnées</h3>
+            <p className="text-xs text-gray-400 leading-relaxed">
+              Moyens de contact pour vos clients et la plateforme.
+            </p>
+          </div>
+
+          <div className="md:col-span-2 space-y-12">
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Adresse e-mail</Label>
+              <Input
+                type="email"
+                required
+                className={minimalInput}
+                value={form.email}
+                onChange={e => setForm({ ...form, email: e.target.value })}
+                placeholder="nom@exemple.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Téléphone portable</Label>
+              <Input
+                className={minimalInput}
+                value={form.phone}
+                onChange={e => setForm({ ...form, phone: e.target.value })}
+                placeholder="06 00 00 00 00"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* MESSAGES & ACTION */}
+        <div className="pt-10 flex flex-col items-end gap-6 border-t border-gray-900 border-opacity-10">
+          
+          <div className="w-full md:w-2/3">
+            {error && (
+              <div className="flex items-center gap-3 text-rose-500 mb-4">
+                <AlertCircle size={14} />
+                <span className="text-[10px] uppercase tracking-widest font-bold">{error}</span>
+              </div>
+            )}
             
-            {/* Prénom & Nom sur la même ligne */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="first_name" className="text-sm font-medium">Prénom *</Label>
-                <Input
-                  id="first_name"
-                  placeholder="Jean"
-                  required
-                  value={form.first_name}
-                  onChange={e => setForm({ ...form, first_name: e.target.value })}
-                  className="bg-slate-50/50"
-                />
+            {success && (
+              <div className="flex items-center gap-3 text-emerald-500 mb-4">
+                <Check size={14} />
+                <span className="text-[10px] uppercase tracking-widest font-bold">Profil synchronisé avec succès</span>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="last_name" className="text-sm font-medium">Nom *</Label>
-                <Input
-                  id="last_name"
-                  placeholder="Dupont"
-                  required
-                  value={form.last_name}
-                  onChange={e => setForm({ ...form, last_name: e.target.value })}
-                  className="bg-slate-50/50"
-                />
-              </div>
-            </div>
+            )}
+          </div>
 
-            {/* Email avec Icône */}
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium">Adresse e-mail *</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  id="email"
-                  type="email"
-                  required
-                  value={form.email}
-                  onChange={e => setForm({ ...form, email: e.target.value })}
-                  className="pl-10 bg-slate-50/50"
-                  placeholder="nom@exemple.com"
-                />
-              </div>
-            </div>
-
-            {/* Téléphone avec Icône */}
-            <div className="space-y-2">
-              <Label htmlFor="phone" className="text-sm font-medium">Téléphone</Label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  id="phone"
-                  value={form.phone}
-                  onChange={e => setForm({ ...form, phone: e.target.value })}
-                  className="pl-10 bg-slate-50/50"
-                  placeholder="06 00 00 00 00"
-                />
-              </div>
-            </div>
-
-            {/* Messages d'alerte */}
-            <div className="pt-2">
-              {error && (
-                <div className="flex items-center gap-2 p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-100">
-                  <AlertCircle size={16} />
-                  <span>{error}</span>
-                </div>
-              )}
-              
-              {success && (
-                <div className="flex items-center gap-2 p-3 text-sm text-green-700 bg-green-50 rounded-lg border border-green-100 animate-in fade-in slide-in-from-top-1">
-                  <CheckCircle2 size={16} />
-                  <span>Votre profil a été mis à jour avec succès.</span>
-                </div>
-              )}
-            </div>
-
-            <Button 
-              type="submit" 
-              className="w-full h-11 bg-teal-600 hover:bg-teal-700 transition-colors shadow-md"
-              disabled={saving}
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Mise à jour...
-                </>
-              ) : (
-                'Enregistrer les modifications'
-              )}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+          <Button 
+            type="submit" 
+            className="rounded-none bg-gray-900 hover:bg-black text-white h-16 px-16 transition-all uppercase text-xs tracking-[0.3em] font-bold disabled:opacity-20 shadow-2xl"
+            disabled={saving}
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <span className="flex items-center gap-4">
+                Mettre à jour <ArrowRight className="h-4 w-4" />
+              </span>
+            )}
+          </Button>
+        </div>
+      </form>
     </div>
   )
 }

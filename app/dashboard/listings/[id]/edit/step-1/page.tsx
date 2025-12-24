@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useListing } from '@/context/ListingContext'
+import { Loader2, ArrowRight } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -75,86 +76,107 @@ export default function Step1Page() {
       if (error) throw error
 
       updateListing(data)
-      toast.success("Annonce mise à jour")
       router.push(`/dashboard/listings/${data.id}/edit/step-2`)
     } catch (error: any) {
-      console.error(error)
       toast.error("Erreur de sauvegarde")
     } finally {
       setLoading(false)
     }
   }
 
-  if (isLoading) return <div className="p-20 text-center animate-pulse">Chargement...</div>
+  if (isLoading) return (
+    <div className="flex h-[60vh] items-center justify-center">
+      <Loader2 className="h-6 w-6 animate-spin text-gray-900" />
+    </div>
+  )
 
   return (
-    <div className="w-full max-w-xl mx-auto pt-12 pb-20 px-6">
-      {/* En-tête épuré sans cadre */}
-      <div className="mb-12 space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-gray-900">
-          Quel type de bien proposez-vous ?
-        </h1>
-        <p className="text-lg text-gray-500">
-          Étape 1 : Définissons les bases de votre annonce.
-        </p>
+    <div className="p-6 md:p-12 w-full max-w-4xl mx-auto bg-white min-h-screen font-sans">
+      
+      {/* HEADER MINIMALISTE */}
+      <div className="mb-20 border-b border-gray-100 pb-8">
+        <p className="text-[10px] tracking-[0.3em] uppercase font-bold text-gray-400 mb-2">Étape 01 / 08</p>
+        <h1 className="text-4xl font-light tracking-tight text-gray-900">Type de bien & transaction</h1>
       </div>
 
-      <div className="space-y-10">
-        {/* Choix Transaction */}
-        <div className="space-y-3">
-          <Label className="text-sm font-medium text-gray-400 uppercase tracking-widest">
-            Je souhaite faire une
-          </Label>
-          <Select 
-            value={transactionType} 
-            onValueChange={(val) => updateListing({ transaction_type: val })}
-          >
-            <SelectTrigger className="w-full h-16 text-lg border-gray-200 rounded-xl focus:ring-0 focus:border-black transition-all">
-              <SelectValue placeholder="Choisir le type de transaction" />
-            </SelectTrigger>
-            <SelectContent>
-              {TRANSACTION_TYPES.map((type) => (
-                <SelectItem key={type.id} value={type.id} className="h-12 text-base">
-                  {type.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="space-y-24">
+        {/* SECTION TRANSACTION */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-12">
+          <div className="md:col-span-1">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-2">Transaction</h3>
+            <p className="text-xs text-gray-400 leading-relaxed">
+              Précisez si ce bien est destiné à la vente ou à la location.
+            </p>
+          </div>
+          <div className="md:col-span-2">
+            <Label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Nature du projet</Label>
+            <Select 
+              value={transactionType} 
+              onValueChange={(val) => updateListing({ transaction_type: val })}
+            >
+              <SelectTrigger className="rounded-none border-0 border-b border-gray-200 focus:ring-0 px-0 h-14 text-lg shadow-none hover:border-gray-900 transition-colors">
+                <SelectValue placeholder="Choisir une option" />
+              </SelectTrigger>
+              <SelectContent className="rounded-none border-gray-100">
+                {TRANSACTION_TYPES.map((type) => (
+                  <SelectItem key={type.id} value={type.id} className="rounded-none py-3 cursor-pointer">
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </section>
 
-        {/* Choix Type de bien */}
-        <div className="space-y-3">
-          <Label className="text-sm font-medium text-gray-400 uppercase tracking-widest">
-            Il s'agit d'un / d'une
-          </Label>
-          <Select 
-            value={propertyType} 
-            onValueChange={(val) => updateListing({ property_type: val })}
-          >
-            <SelectTrigger className="w-full h-16 text-lg border-gray-200 rounded-xl focus:ring-0 focus:border-black transition-all">
-              <SelectValue placeholder="Sélectionner la catégorie" />
-            </SelectTrigger>
-            <SelectContent className="max-h-[400px]">
-              {PROPERTY_TYPES.map((type) => (
-                <SelectItem key={type.id} value={type.id} className="h-12 text-base">
-                  {type.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {/* SECTION TYPE DE BIEN */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-12 border-t border-gray-50 pt-16">
+          <div className="md:col-span-1">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-2">Catégorie</h3>
+            <p className="text-xs text-gray-400 leading-relaxed">
+              Sélectionnez la nature exacte du bien immobilier.
+            </p>
+          </div>
+          <div className="md:col-span-2">
+            <Label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Type de propriété</Label>
+            <Select 
+              value={propertyType} 
+              onValueChange={(val) => updateListing({ property_type: val })}
+            >
+              <SelectTrigger className="rounded-none border-0 border-b border-gray-200 focus:ring-0 px-0 h-14 text-lg shadow-none hover:border-gray-900 transition-colors">
+                <SelectValue placeholder="Sélectionner le type de bien" />
+              </SelectTrigger>
+              <SelectContent className="rounded-none border-gray-100 max-h-[300px]">
+                {PROPERTY_TYPES.map((type) => (
+                  <SelectItem key={type.id} value={type.id} className="rounded-none py-3 cursor-pointer">
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </section>
 
-        {/* Barre d'action inférieure style Airbnb */}
-        <div className="pt-10 border-t border-gray-100 flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-400 underline cursor-not-allowed">
+        {/* ACTIONS FOOTER */}
+        <div className="pt-10 border-t border-gray-900 border-opacity-10 flex items-center justify-between pb-20">
+          <button 
+            onClick={() => router.back()}
+            className="text-[10px] uppercase tracking-[0.2em] font-bold text-gray-400 hover:text-gray-900 transition-colors"
+          >
             Retour
-          </span>
+          </button>
+          
           <Button 
-            className="h-14 px-10 text-lg font-semibold bg-rose-500 hover:bg-rose-600 text-white rounded-xl shadow-lg transition-transform active:scale-95 disabled:bg-gray-200"
+            className="rounded-none bg-gray-900 hover:bg-black text-white h-14 px-12 transition-all uppercase text-xs tracking-[0.2em] font-bold disabled:opacity-20"
             disabled={loading || !transactionType || !propertyType}
             onClick={handleSubmit}
           >
-            {loading ? "Enregistrement..." : "Suivant"}
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <span className="flex items-center gap-2">
+                Suivant <ArrowRight className="h-4 w-4" />
+              </span>
+            )}
           </Button>
         </div>
       </div>

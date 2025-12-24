@@ -12,10 +12,10 @@ import { Label } from '@/components/ui/label'
 import { 
   Car, Grid, Sun, Sunrise, Sunset, Cloud, 
   UserCheck, Video, ThermometerSnowflake, Flame, Zap, 
-  Euro, Warehouse, SquareParking, Archive, Columns
+  Euro, Warehouse, SquareParking, Archive, Columns,
+  Loader2, ArrowRight, Check
 } from 'lucide-react'
 
-// Liste des features enrichie et catégorisée
 const AMENITIES = [
   { id: 'parking_collectif', label: 'Parking collectif', icon: Car, category: 'Stationnement' },
   { id: 'parking_individuel', label: 'Parking individuel', icon: SquareParking, category: 'Stationnement' },
@@ -52,7 +52,6 @@ export default function Step4Page() {
     heating_type: ''
   })
 
-  // Groupement des équipements par catégorie pour l'affichage
   const categories = Array.from(new Set(AMENITIES.map(a => a.category)))
 
   React.useEffect(() => {
@@ -102,7 +101,6 @@ export default function Step4Page() {
 
       if (listError) throw listError
 
-      // Synchro table de liaison
       await supabase.from('listing_features').delete().eq('listing_id', params.id)
       
       if (selectedFeatures.length > 0) {
@@ -122,7 +120,6 @@ export default function Step4Page() {
 
       updateListing(updatedListing)
       router.push(`/dashboard/listings/${params.id}/edit/step-5`)
-      toast.success("Informations enregistrées")
     } catch (error) {
       toast.error("Erreur de sauvegarde")
     } finally {
@@ -130,97 +127,132 @@ export default function Step4Page() {
     }
   }
 
-  const airbnbInput = "h-14 text-lg border-gray-200 rounded-xl focus-visible:ring-1 focus-visible:ring-black focus-visible:border-black transition-all"
+  const minimalInput = "rounded-none border-0 border-b border-gray-200 focus-visible:ring-0 focus-visible:border-gray-900 px-0 h-12 text-lg transition-colors bg-transparent shadow-none w-full"
 
-  if (contextLoading) return <div className="p-20 text-center animate-pulse text-gray-400">Chargement...</div>
+  if (contextLoading) return (
+    <div className="flex h-[60vh] items-center justify-center">
+      <Loader2 className="h-6 w-6 animate-spin text-gray-900" />
+    </div>
+  )
 
   return (
-    <div className="w-full max-w-2xl mx-auto pt-12 pb-20 px-6 font-sans">
-      <div className="mb-10 space-y-2">
-        <h1 className="text-3xl font-semibold text-gray-900 tracking-tight">Détails et équipements</h1>
-        <span className="text-sm font-bold uppercase tracking-widest text-rose-500">Étape 4 sur 6</span>
+    <div className="p-6 md:p-12 w-full max-w-5xl mx-auto bg-white min-h-screen font-sans">
+      
+      {/* HEADER */}
+      <div className="mb-20 border-b border-gray-100 pb-8 text-left">
+        <p className="text-[10px] tracking-[0.3em] uppercase font-bold text-gray-400 mb-2">Étape 04 / 08</p>
+        <h1 className="text-4xl font-light tracking-tight text-gray-900">Équipements & Coûts</h1>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-12">
+      <form onSubmit={handleSubmit} className="space-y-24">
         
-        {/* FINANCES */}
-        <section className="space-y-6">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Euro className="h-5 w-5" /> Coûts annuels
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* --- SECTION FINANCES --- */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-12">
+          <div className="md:col-span-1">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-2">Frais Annuels</h3>
+            <p className="text-xs text-gray-400 leading-relaxed">
+              Indiquez les charges liées à la possession ou l'usage du bien.
+            </p>
+          </div>
+          <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-10">
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase text-gray-400">Taxe Foncière (€/an)</Label>
-              <Input 
-                type="number" 
-                className={airbnbInput}
-                value={financialData.property_tax}
-                onChange={(e) => setFinancialData({...financialData, property_tax: e.target.value})}
-              />
+              <Label className="text-[10px] uppercase tracking-widest font-bold text-gray-400 text-slate-400">Taxe Foncière (€/an)</Label>
+              <div className="relative">
+                <Input 
+                  type="number" 
+                  className={minimalInput}
+                  value={financialData.property_tax}
+                  onChange={(e) => setFinancialData({...financialData, property_tax: e.target.value})}
+                />
+                <Euro className="absolute right-0 top-3 h-4 w-4 text-gray-300" />
+              </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase text-gray-400">Charges Copro (€/an)</Label>
-              <Input 
-                type="number" 
-                className={airbnbInput}
-                value={financialData.condo_fees_annual}
-                onChange={(e) => setFinancialData({...financialData, condo_fees_annual: e.target.value})}
-              />
+              <Label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Charges Copro (€/an)</Label>
+              <div className="relative">
+                <Input 
+                  type="number" 
+                  className={minimalInput}
+                  value={financialData.condo_fees_annual}
+                  onChange={(e) => setFinancialData({...financialData, condo_fees_annual: e.target.value})}
+                />
+                <Euro className="absolute right-0 top-3 h-4 w-4 text-gray-300" />
+              </div>
             </div>
           </div>
         </section>
 
-        {/* CHAUFFAGE */}
-        <section className="space-y-4">
-          <Label className="text-xs font-bold uppercase text-gray-400">Type de Chauffage</Label>
-          <div className="grid grid-cols-3 gap-3">
-            {HEATING_TYPES.map((type) => (
-              <button
-                key={type.id}
-                type="button"
-                onClick={() => setFinancialData({...financialData, heating_type: type.id})}
-                className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${financialData.heating_type === type.id ? 'border-black bg-gray-50' : 'border-gray-100 hover:border-gray-300'}`}
-              >
-                <type.icon className="h-6 w-6" />
-                <span className="text-xs font-medium">{type.label}</span>
-              </button>
+        {/* --- SECTION CHAUFFAGE --- */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-12 border-t border-gray-50 pt-16">
+          <div className="md:col-span-1">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-2">Énergie</h3>
+            <p className="text-xs text-gray-400 leading-relaxed">Le type de chauffage principal du bien.</p>
+          </div>
+          <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {HEATING_TYPES.map((type) => {
+              const isActive = financialData.heating_type === type.id
+              return (
+                <button
+                  key={type.id}
+                  type="button"
+                  onClick={() => setFinancialData({...financialData, heating_type: type.id})}
+                  className={`flex flex-col items-center justify-center gap-3 p-6 border transition-all ${isActive ? 'border-gray-900 bg-white shadow-sm' : 'border-gray-100 text-gray-400 hover:border-gray-300'}`}
+                >
+                  <type.icon className={`h-5 w-5 ${isActive ? 'text-gray-900' : 'text-gray-300'}`} />
+                  <span className={`text-[10px] font-bold uppercase tracking-tighter ${isActive ? 'text-gray-900' : ''}`}>{type.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </section>
+
+        {/* --- SECTION ÉQUIPEMENTS --- */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-12 border-t border-gray-50 pt-16">
+          <div className="md:col-span-1">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-2">Équipements</h3>
+            <p className="text-xs text-gray-400 leading-relaxed">Cochez les prestations incluses.</p>
+          </div>
+          <div className="md:col-span-2 space-y-16">
+            {categories.map((category) => (
+              <div key={category} className="space-y-6">
+                <h4 className="text-[10px] uppercase tracking-[0.2em] font-bold text-gray-300">{category}</h4>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {AMENITIES.filter(a => a.category === category).map((item) => {
+                    const isSelected = selectedFeatures.includes(item.id)
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => toggleFeature(item.id)}
+                        className={`group relative flex items-center gap-4 p-4 border transition-all ${isSelected ? 'border-gray-900 bg-white' : 'border-gray-50 bg-gray-50/30 hover:border-gray-200'}`}
+                      >
+                        <item.icon className={`h-4 w-4 ${isSelected ? 'text-gray-900' : 'text-gray-300 group-hover:text-gray-400'}`} />
+                        <span className={`text-[11px] font-medium leading-tight ${isSelected ? 'text-gray-900' : 'text-gray-500'}`}>{item.label}</span>
+                        {isSelected && <Check className="absolute right-3 h-3 w-3 text-gray-900" />}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
             ))}
           </div>
         </section>
 
-        <hr className="border-gray-100" />
-
-        {/* ÉQUIPEMENTS PAR CATÉGORIE */}
-        <div className="space-y-10">
-          {categories.map((category) => (
-            <section key={category} className="space-y-4">
-              <h3 className="text-sm font-bold uppercase text-gray-400 tracking-wider">{category}</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {AMENITIES.filter(a => a.category === category).map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => toggleFeature(item.id)}
-                    className={`flex flex-col items-start gap-4 p-4 rounded-xl border-2 transition-all text-left ${selectedFeatures.includes(item.id) ? 'border-black bg-gray-50' : 'border-gray-100 hover:border-gray-300'}`}
-                  >
-                    <item.icon className="h-5 w-5" />
-                    <span className="text-sm font-medium leading-tight">{item.label}</span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-
-        {/* NAVIGATION */}
-        <div className="pt-10 border-t flex items-center justify-between">
-          <button type="button" onClick={() => router.back()} className="text-sm font-bold underline text-gray-900">Retour</button>
+        {/* --- FOOTER --- */}
+        <div className="pt-10 border-t border-gray-900 border-opacity-10 flex items-center justify-between pb-20">
+          <button 
+            type="button" 
+            onClick={() => router.back()} 
+            className="text-[10px] uppercase tracking-[0.2em] font-bold text-gray-400 hover:text-gray-900 transition-colors"
+          >
+            Retour
+          </button>
           <Button 
             type="submit" 
             disabled={loading} 
-            className="h-14 px-12 bg-rose-500 hover:bg-rose-600 text-white rounded-xl shadow-lg font-bold"
+            className="rounded-none bg-gray-900 hover:bg-black text-white h-14 px-12 transition-all uppercase text-xs tracking-[0.2em] font-bold disabled:opacity-20"
           >
-            {loading ? "Chargement..." : "Suivant"}
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <span className="flex items-center gap-2">Suivant <ArrowRight className="h-4 w-4" /></span>}
           </Button>
         </div>
       </form>

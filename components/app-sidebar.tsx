@@ -12,13 +12,17 @@ import {
   PieChart,
   Settings2,
   SquareTerminal,
+  LayoutGrid,
+  FileText,
+  Building2,
+  Users2
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
 import { NavProjects } from "@/components/nav-projects"
 import { NavUser } from "@/components/nav-user"
 import { TeamSwitcher } from "@/components/team-switcher"
-import { useListing } from "@/context/ListingContext" // Import du context
+import { useListing } from "@/context/ListingContext"
 import {
   Sidebar,
   SidebarContent,
@@ -27,55 +31,49 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 
-// On garde les données statiques à l'extérieur
 const STATIC_DATA = {
   user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+    name: "Espace Partenaire",
+    email: "agence@unbienimmo.com",
+    avatar: "/avatars/pro.jpg",
   },
   teams: [
-    { name: "Acme Inc", logo: GalleryVerticalEnd, plan: "Enterprise" },
-    { name: "Acme Corp.", logo: AudioWaveform, plan: "Startup" },
-    { name: "Evil Corp.", logo: Command, plan: "Free" },
+    { name: "UnBienImmo", logo: Command, plan: "Pro" },
   ],
   projects: [
-    { name: "Design Engineering", url: "#", icon: Frame },
-    { name: "Sales & Marketing", url: "#", icon: PieChart },
-    { name: "Travel", url: "#", icon: Map },
+    { name: "Statistiques", url: "#", icon: PieChart },
+    { name: "Aide & Support", url: "#", icon: Map },
   ],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { listing } = useListing() // Récupération de l'annonce en cours
+  const { listing } = useListing()
 
-  // On définit navMain ici pour qu'il puisse utiliser la variable `listing`
   const navMain = [
     {
       title: "Utilisateurs",
       url: "#",
-      icon: SquareTerminal,
-      isActive: true,
+      icon: Users2,
+      isActive: false,
       items: [
-        { title: "Utilisateur principal", url: "/users/main" },
-        { title: "Autres utilisateurs", url: "#" },
-        { title: "Voir", url: "#" },
+        { title: "Profil principal", url: "/users/main" },
+        { title: "Collaborateurs", url: "#" },
       ],
     },
     {
       title: "Société",
       url: "#",
-      icon: Bot,
+      icon: Building2,
       items: [
-        { title: "Fiche", url: "/users/company" },
+        { title: "Fiche Agence", url: "/users/company" },
         { title: "Page publique", url: "/users/company/public" },
-        { title: "Voir page publique", url: "#" },
       ],
     },
     {
       title: "Annonces",
       url: "#",
-      icon: BookOpen,
+      icon: FileText,
+      isActive: true,
       items: [
         {
           title: "Mes annonces",
@@ -83,41 +81,56 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         },
         {
           title: "Créer une annonce",
-          // CORRECTION : Utilisation de l'ID du contexte
           url: listing?.id 
             ? `/dashboard/listings/${listing.id}/edit/step-1` 
             : "/dashboard/listings/new/edit/step-1",
         },
-        { title: "Tutorials", url: "#" },
-        { title: "Changelog", url: "#" },
       ],
     },
     {
-      title: "Settings",
+      title: "Paramètres",
       url: "#",
       icon: Settings2,
       items: [
-        { title: "General", url: "#" },
-        { title: "Team", url: "#" },
-        { title: "Billing", url: "#" },
-        { title: "Limits", url: "#" },
+        { title: "Général", url: "#" },
+        { title: "Facturation", url: "#" },
       ],
     },
   ]
 
   return (
-    <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
+    <Sidebar 
+      collapsible="icon" 
+      className="border-r border-gray-100 bg-white" 
+      {...props}
+    >
+      {/* HEADER : Plus sobre, sans fonds colorés inutiles */}
+      <SidebarHeader className="h-16 border-b border-gray-50 flex justify-center px-4">
         <TeamSwitcher teams={STATIC_DATA.teams} />
       </SidebarHeader>
-      <SidebarContent>
-        {/* On passe le navMain dynamique ici */}
-        <NavMain items={navMain} />
-        <NavProjects projects={STATIC_DATA.projects} />
+
+      <SidebarContent className="py-6 px-2">
+        {/* NavMain gère la typographie des liens */}
+        <div className="mb-4 px-4">
+            <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-gray-300 mb-6">
+                Navigation
+            </p>
+            <NavMain items={navMain} />
+        </div>
+        
+        <div className="mt-10 px-4 border-t border-gray-50 pt-8">
+            <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-gray-300 mb-6">
+                Outils
+            </p>
+            <NavProjects projects={STATIC_DATA.projects} />
+        </div>
       </SidebarContent>
-      <SidebarFooter>
+
+      {/* FOOTER : Très épuré */}
+      <SidebarFooter className="border-t border-gray-50 p-4">
         <NavUser user={STATIC_DATA.user} />
       </SidebarFooter>
+
       <SidebarRail />
     </Sidebar>
   )

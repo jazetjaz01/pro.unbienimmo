@@ -2,12 +2,12 @@
 
 import * as React from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
-import { CheckCircle2, Home, ExternalLink, Loader2 } from 'lucide-react'
+import { Sparkles, Home, ExternalLink, Loader2, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Confetti from 'react-confetti'
 
-// --- HOOK POUR LES CONFETTIS ---
 function useWindowSize() {
   const [size, setSize] = React.useState({
     width: typeof window !== 'undefined' ? window.innerWidth : 0,
@@ -29,40 +29,26 @@ export default function ListingSuccessPage() {
   const params = useParams()
   const supabase = createClient()
   const { width, height } = useWindowSize()
-
+  const [mounted, setMounted] = React.useState(false)
   const [listing, setListing] = React.useState<any>(null)
   const [loading, setLoading] = React.useState(true)
-  const [error, setError] = React.useState<string | null>(null)
 
-  // URL de base pour le site public (sans le "pro.")
   const PUBLIC_SITE_URL = "https://www.unbienimmo.com"
 
   React.useEffect(() => {
+    setMounted(true)
     async function fetchListingDetails() {
       if (!params.id) return;
-      
       try {
         const { data, error } = await supabase
           .from('listings')
-          .select(`
-            id, 
-            title, 
-            street_address, 
-            city, 
-            zip_code, 
-            price, 
-            property_type,
-            professionals:professional_id ( name, email, phone )
-          `)
+          .select(`id, title, street_address, city, zip_code, price, professionals:professional_id ( name )`)
           .eq('id', params.id)
           .single()
-
         if (error) throw error
         setListing(data)
-
       } catch (e: any) {
-        console.error("Erreur Success Page:", e.message)
-        setError("Impossible de charger les détails de l'annonce.")
+        console.error(e.message)
       } finally {
         setLoading(false)
       }
@@ -70,85 +56,87 @@ export default function ListingSuccessPage() {
     fetchListingDetails()
   }, [params.id, supabase])
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-gray-500">
-        <Loader2 className="h-10 w-10 animate-spin mb-4 text-rose-500" />
-        <p className="text-xl font-medium">Finalisation de la publication...</p>
-      </div>
-    )
-  }
-
-  if (error || !listing) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center">
-        <div className="bg-red-50 p-6 rounded-2xl border border-red-100 text-red-600 mb-6">
-          {error || "Annonce introuvable."}
-        </div>
-        <Button onClick={() => router.push('/dashboard/listings')} className="bg-slate-900">
-          Retour au tableau de bord
-        </Button>
-      </div>
-    )
-  }
+  if (loading) return (
+    <div className="flex h-[80vh] items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-gray-900" />
+    </div>
+  )
 
   return (
-    <div className="relative flex flex-col items-center justify-center min-h-[calc(100vh-80px)] p-6 text-center">
+    <div className="min-h-[calc(100vh-80px)] w-full flex items-center justify-center p-4 bg-white">
       
-      <Confetti
-        width={width}
-        height={height}
-        recycle={false}
-        numberOfPieces={300}
-        gravity={0.15}
-        colors={['#FDA4AF', '#F43F5E', '#BE123C', '#27272A']}
-      />
+      {/* CONFETTIS AU PREMIER PLAN */}
+      {mounted && createPortal(
+        <Confetti
+          width={width}
+          height={height}
+          recycle={false}
+          numberOfPieces={400}
+          gravity={0.15}
+          colors={['#000000', '#FF385C', '#717171', '#EBEBEB']}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            zIndex: 9999,
+            pointerEvents: 'none'
+          }}
+        />,
+        document.body
+      )}
 
-      <div className="z-10 bg-white p-8 md:p-12 rounded-[40px] shadow-2xl max-w-2xl w-full border border-gray-50 animate-in fade-in zoom-in duration-700">
-        <div className="bg-green-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-          <CheckCircle2 className="h-12 w-12 text-green-600" />
-        </div>
-        
-        <h1 className="text-4xl font-black text-gray-900 mb-4 tracking-tight">
-          Annonce Publiée !
-        </h1>
-        <p className="text-lg text-gray-500 mb-8">
-          Félicitations, votre bien est désormais visible en ligne.
-        </p>
-
-        <div className="space-y-3 mb-10 text-left bg-slate-50 p-6 rounded-3xl border border-slate-100">
-          <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-2">Récapitulatif</h2>
-          <p className="text-slate-900 font-bold text-lg leading-tight">{listing.title}</p>
-          <p className="text-slate-600 text-sm">
-            {listing.street_address}, {listing.zip_code} {listing.city}
+      <div className="w-full max-w-[500px] animate-in fade-in duration-700">
+        <div className="text-center mb-12">
+          <Sparkles className="h-10 w-10 text-gray-900 mx-auto mb-6" />
+          <h1 className="text-4xl font-light text-gray-900 tracking-tight mb-4">
+            Annonce publiée.
+          </h1>
+          <p className="text-gray-500">
+            Votre bien est désormais visible sur la plateforme.
           </p>
-          <div className="pt-3 border-t border-slate-200 mt-2">
-            <p className="text-rose-600 font-black text-xl">
-              {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(listing.price)}
-            </p>
-          </div>
-          {listing.professionals && (
-            <p className="text-xs text-slate-500 mt-2 italic text-right">
-              Publiée par : {listing.professionals.name}
-            </p>
-          )}
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Button 
-            onClick={() => router.push(`/dashboard`)}
-            className="h-14 px-8 bg-slate-900 hover:bg-black text-white rounded-2xl text-lg font-bold transition-all flex items-center gap-2"
-          >
-            <Home className="h-5 w-5" /> Dashboard
-          </Button>
+        {/* SECTION RECAPITULATIF SANS BORDURES NI ARRONDIS */}
+        <div className="py-8 border-t border-b border-gray-100 mb-12">
+          <div className="flex justify-between items-baseline mb-2">
+            <h2 className="text-lg font-medium text-gray-900">
+              {listing?.title}
+            </h2>
+            <span className="text-lg font-semibold text-gray-900">
+              {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(listing?.price)}
+            </span>
+          </div>
           
-          {/* BOUTON CORRIGÉ ICI POUR POINTER VERS WWW */}
+          <div className="flex items-center text-gray-400 gap-1 text-sm mb-6">
+            <MapPin className="h-3 w-3" />
+            {listing?.street_address}, {listing?.zip_code} {listing?.city}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+            <span className="text-xs uppercase tracking-widest text-gray-400 font-medium">
+              Statut : Actif en ligne
+            </span>
+          </div>
+        </div>
+
+        {/* BOUTONS CARRES / STYLE MINIMAL */}
+        <div className="flex flex-col gap-3">
           <Button 
             onClick={() => window.open(`${PUBLIC_SITE_URL}/listings/${listing.id}`, '_blank')}
-            variant="outline"
-            className="h-14 px-8 border-2 border-slate-200 text-slate-900 hover:bg-slate-50 rounded-2xl text-lg font-bold transition-all flex items-center gap-2"
+            className="h-14 bg-gray-900 hover:bg-black text-white rounded-none text-sm font-bold transition-all uppercase tracking-widest"
           >
-            <ExternalLink className="h-5 w-5" /> Voir en ligne
+            <ExternalLink className="mr-2 h-4 w-4" /> Voir l'annonce
+          </Button>
+          
+          <Button 
+            onClick={() => router.push(`/dashboard`)}
+            variant="ghost"
+            className="h-14 text-gray-500 hover:text-gray-900 rounded-none text-sm font-medium transition-all"
+          >
+            <Home className="mr-2 h-4 w-4" /> Retour au tableau de bord
           </Button>
         </div>
       </div>

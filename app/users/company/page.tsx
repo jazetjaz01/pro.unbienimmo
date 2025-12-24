@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Loader2, Building2, Check, AlertCircle } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -65,7 +65,6 @@ export default function CompanyProfilePage() {
 
       setLoading(false)
     }
-
     fetchCompany()
   }, [supabase])
 
@@ -74,7 +73,6 @@ export default function CompanyProfilePage() {
     setError(null)
     setSuccess(false)
 
-    // Validation minimale
     if (!form.name.trim() || !form.type) {
       return setError('Le nom commercial et le type d’activité sont obligatoires.')
     }
@@ -105,180 +103,176 @@ export default function CompanyProfilePage() {
     }, { onConflict: 'owner_id' })
 
     if (error) setError(error.message)
-    else setSuccess(true)
+    else {
+      setSuccess(true)
+      setTimeout(() => setSuccess(false), 3000)
+    }
     setSaving(false)
   }
 
-  if (loading) return <div className="flex justify-center p-10">Chargement...</div>
+  if (loading) return (
+    <div className="flex h-[60vh] items-center justify-center">
+      <Loader2 className="h-6 w-6 animate-spin text-gray-900" />
+    </div>
+  )
 
   return (
-    <div className="w-full max-w-2xl">
-      <Card className="shadow-lg border-none">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center text-slate-800">
-            Fiche Société
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-8">
-            
-            {/* --- SECTION IDENTIFICATION --- */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold  uppercase tracking-wider border-b pb-1">
-                Informations Légales
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nom commercial *</Label>
-                  <Input 
-                    id="name" 
-                    value={form.name} 
-                    onChange={e => setForm({ ...form, name: e.target.value })} 
-                    placeholder="Nom de l'enseigne"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="type">Activité principale *</Label>
-                  <Select 
-                    value={form.type} 
-                    onValueChange={(val) => setForm({ ...form, type: val })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choisir..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="agence">Agence immobilière</SelectItem>
-                      <SelectItem value="syndic">Syndic</SelectItem>
-                      <SelectItem value="notaire">Notaire</SelectItem>
-                      <SelectItem value="promoteur">Promoteur</SelectItem>
-                      <SelectItem value="constructeur">Constructeur</SelectItem>
-                      <SelectItem value="autre">Autre</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="legal_name">Raison sociale</Label>
-                  <Input 
-                    id="legal_name" 
-                    value={form.legal_name} 
-                    onChange={e => setForm({ ...form, legal_name: e.target.value })} 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="siret">SIRET</Label>
-                  <Input 
-                    id="siret" 
-                    value={form.siret} 
-                    onChange={e => setForm({ ...form, siret: e.target.value })} 
-                  />
-                </div>
+    <div className="p-6 md:p-12 w-full max-w-4xl mx-auto bg-white min-h-screen font-sans">
+      
+      {/* HEADER MINIMALISTE */}
+      <div className="mb-16 border-b border-gray-100 pb-8">
+        <div className="flex items-center gap-3 mb-2">
+          <Building2 className="h-5 w-5 text-gray-900" />
+          <p className="text-gray-400 text-sm tracking-[0.2em] uppercase font-bold">Paramètres</p>
+        </div>
+        <h1 className="text-4xl font-light tracking-tight text-gray-900">Fiche Société</h1>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-20">
+        
+        {/* --- SECTION IDENTIFICATION --- */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="md:col-span-1">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-2">Identification</h3>
+            <p className="text-xs text-gray-400 leading-relaxed">Les informations officielles de votre établissement.</p>
+          </div>
+          <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8">
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Nom commercial *</Label>
+              <Input 
+                className="rounded-none border-0 border-b border-gray-200 focus-visible:ring-0 focus-visible:border-gray-900 px-0 transition-colors"
+                value={form.name} 
+                onChange={e => setForm({ ...form, name: e.target.value })} 
+                placeholder="Ex: Agence du Palais"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Activité *</Label>
+              <Select value={form.type} onValueChange={(val) => setForm({ ...form, type: val })}>
+                <SelectTrigger className="rounded-none border-0 border-b border-gray-200 focus:ring-0 px-0 shadow-none">
+                  <SelectValue placeholder="Choisir..." />
+                </SelectTrigger>
+                <SelectContent className="rounded-none border-gray-100">
+                  <SelectItem value="agence">Agence immobilière</SelectItem>
+                  <SelectItem value="syndic">Syndic</SelectItem>
+                  <SelectItem value="notaire">Notaire</SelectItem>
+                  <SelectItem value="promoteur">Promoteur</SelectItem>
+                  <SelectItem value="autre">Autre</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Raison sociale</Label>
+              <Input 
+                className="rounded-none border-0 border-b border-gray-200 focus-visible:ring-0 focus-visible:border-gray-900 px-0"
+                value={form.legal_name} 
+                onChange={e => setForm({ ...form, legal_name: e.target.value })} 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">SIRET</Label>
+              <Input 
+                className="rounded-none border-0 border-b border-gray-200 focus-visible:ring-0 focus-visible:border-gray-900 px-0"
+                value={form.siret} 
+                onChange={e => setForm({ ...form, siret: e.target.value })} 
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* --- SECTION CONTACT --- */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-gray-50 pt-16">
+          <div className="md:col-span-1">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-2">Visibilité</h3>
+            <p className="text-xs text-gray-400 leading-relaxed">Coordonnées affichées sur vos annonces publiques.</p>
+          </div>
+          <div className="md:col-span-2 space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Email pro</Label>
+                <Input 
+                  className="rounded-none border-0 border-b border-gray-200 focus-visible:ring-0 focus-visible:border-gray-900 px-0"
+                  type="email" 
+                  value={form.email} 
+                  onChange={e => setForm({ ...form, email: e.target.value })} 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Téléphone</Label>
+                <Input 
+                  className="rounded-none border-0 border-b border-gray-200 focus-visible:ring-0 focus-visible:border-gray-900 px-0"
+                  value={form.phone} 
+                  onChange={e => setForm({ ...form, phone: e.target.value })} 
+                />
               </div>
             </div>
-
-            {/* --- SECTION CONTACT --- */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold uppercase tracking-wider border-b pb-1">
-                Contact & Visibilité
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email professionnel</Label>
-                  <Input 
-                    id="email" 
-                    type="email" 
-                    value={form.email} 
-                    onChange={e => setForm({ ...form, email: e.target.value })} 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Téléphone</Label>
-                  <Input 
-                    id="phone" 
-                    value={form.phone} 
-                    onChange={e => setForm({ ...form, phone: e.target.value })} 
-                  />
-                </div>
-                <div className="md:col-span-2 space-y-2">
-                  <Label htmlFor="website">Site internet</Label>
-                  <Input 
-                    id="website" 
-                    type="url" 
-                    placeholder="https://www.exemple.com"
-                    value={form.website} 
-                    onChange={e => setForm({ ...form, website: e.target.value })} 
-                  />
-                </div>
-              </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Site internet</Label>
+              <Input 
+                className="rounded-none border-0 border-b border-gray-200 focus-visible:ring-0 focus-visible:border-gray-900 px-0"
+                type="url" 
+                value={form.website} 
+                onChange={e => setForm({ ...form, website: e.target.value })} 
+              />
             </div>
+          </div>
+        </section>
 
-            {/* --- SECTION ADRESSE --- */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold  uppercase tracking-wider border-b pb-1">
-                Localisation
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="md:col-span-3 space-y-2">
-                  <Label htmlFor="street_address">Adresse (Rue)</Label>
-                  <Input 
-                    id="street_address" 
-                    value={form.street_address} 
-                    onChange={e => setForm({ ...form, street_address: e.target.value })} 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="zip_code">Code Postal</Label>
-                  <Input 
-                    id="zip_code" 
-                    value={form.zip_code} 
-                    onChange={e => setForm({ ...form, zip_code: e.target.value })} 
-                  />
-                </div>
-                <div className="md:col-span-2 space-y-2">
-                  <Label htmlFor="city">Ville</Label>
-                  <Input 
-                    id="city" 
-                    value={form.city} 
-                    onChange={e => setForm({ ...form, city: e.target.value })} 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="region">Région</Label>
-                  <Input 
-                    id="region" 
-                    value={form.region} 
-                    onChange={e => setForm({ ...form, region: e.target.value })} 
-                  />
-                </div>
-                <div className="md:col-span-2 space-y-2">
-                  <Label htmlFor="country">Pays</Label>
-                  <Input 
-                    id="country" 
-                    value={form.country} 
-                    onChange={e => setForm({ ...form, country: e.target.value })} 
-                  />
-                </div>
-              </div>
+        {/* --- SECTION ADRESSE --- */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-gray-50 pt-16">
+          <div className="md:col-span-1">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-2">Localisation</h3>
+            <p className="text-xs text-gray-400 leading-relaxed">Adresse du siège ou de l'agence principale.</p>
+          </div>
+          <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-8">
+            <div className="md:col-span-3 space-y-2">
+              <Label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Adresse (Rue)</Label>
+              <Input 
+                className="rounded-none border-0 border-b border-gray-200 focus-visible:ring-0 focus-visible:border-gray-900 px-0"
+                value={form.street_address} 
+                onChange={e => setForm({ ...form, street_address: e.target.value })} 
+              />
             </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Code Postal</Label>
+              <Input 
+                className="rounded-none border-0 border-b border-gray-200 focus-visible:ring-0 focus-visible:border-gray-900 px-0"
+                value={form.zip_code} 
+                onChange={e => setForm({ ...form, zip_code: e.target.value })} 
+              />
+            </div>
+            <div className="md:col-span-2 space-y-2">
+              <Label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Ville</Label>
+              <Input 
+                className="rounded-none border-0 border-b border-gray-200 focus-visible:ring-0 focus-visible:border-gray-900 px-0"
+                value={form.city} 
+                onChange={e => setForm({ ...form, city: e.target.value })} 
+              />
+            </div>
+          </div>
+        </section>
 
-            {/* --- FEEDBACK & SUBMIT --- */}
-            <div className="pt-4 space-y-4">
-              {error && (
-                <div className="p-3 bg-red-50 text-red-600 text-sm rounded-md text-center border border-red-100">
-                  {error}
-                </div>
-              )}
-              {success && (
-                <div className="p-3 bg-green-50 text-green-700 text-sm rounded-md text-center border border-green-100">
-                  Profil professionnel mis à jour avec succès !
-                </div>
-              )}
-              <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={saving}>
-                {saving ? 'Enregistrement en cours...' : 'Sauvegarder les modifications'}
-              </Button>
+        {/* --- FOOTER / ACTIONS --- */}
+        <div className="pt-10 border-t border-gray-900 border-opacity-10 flex flex-col items-end gap-4">
+          {error && (
+            <div className="flex items-center gap-2 text-red-600 text-xs font-bold uppercase tracking-wider">
+              <AlertCircle className="h-4 w-4" /> {error}
             </div>
-          </form>
-        </CardContent>
-      </Card>
+          )}
+          {success && (
+            <div className="flex items-center gap-2 text-gray-900 text-xs font-bold uppercase tracking-wider">
+              <Check className="h-4 w-4" /> Profil mis à jour
+            </div>
+          )}
+          <Button 
+            type="submit" 
+            className="w-full md:w-auto h-14 px-12 bg-gray-900 hover:bg-black text-white rounded-none text-xs font-bold uppercase tracking-[0.2em] transition-all disabled:opacity-50" 
+            disabled={saving}
+          >
+            {saving ? 'Enregistrement...' : 'Sauvegarder les modifications'}
+          </Button>
+        </div>
+      </form>
     </div>
   )
 }

@@ -8,14 +8,13 @@ import {
   Eye, 
   Edit3, 
   Loader2, 
-  CheckCircle2, 
-  Clock,
   MoreHorizontal,
   MapPin,
   Phone,
   Power,
   PowerOff,
-  Trash2 
+  Trash2,
+  ExternalLink 
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -30,11 +29,9 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 
 interface ListingItem {
@@ -54,7 +51,6 @@ export default function MyListingsPage() {
   const [listings, setListings] = React.useState<ListingItem[]>([])
   const [loading, setLoading] = React.useState(true)
 
-  // URL de base pour le site public
   const PUBLIC_SITE_URL = "https://www.unbienimmo.com"
 
   const fetchMyListings = React.useCallback(async () => {
@@ -71,7 +67,7 @@ export default function MyListingsPage() {
       if (error) throw error
       setListings(data || [])
     } catch (e: any) {
-      toast.error("Erreur de chargement : " + e.message)
+      toast.error("Erreur de chargement")
     } finally {
       setLoading(false)
     }
@@ -82,202 +78,151 @@ export default function MyListingsPage() {
   }, [fetchMyListings])
 
   const deleteListing = async (id: number) => {
-    const confirmDelete = window.confirm(
-      "Supprimer définitivement cette annonce et TOUTES ses photos ? Cette action est irréversible."
-    )
-    
-    if (!confirmDelete) return
+    if (!window.confirm("Supprimer définitivement cette annonce ?")) return
 
     try {
-      const folderPath = `${id}` 
-
-      // 1. Nettoyage du Bucket Storage
-      const { data: files, error: listError } = await supabase
-        .storage
-        .from('listings-images')
-        .list(folderPath)
-
-      if (!listError && files && files.length > 0) {
-        const filesToRemove = files.map((file) => `${folderPath}/${file.name}`)
-        const { error: storageError } = await supabase
-          .storage
-          .from('listings') // ne pos corriger ( le bucket s'appele bien listings)
-          .remove(filesToRemove)
-
-        if (storageError) console.error("Erreur Storage:", storageError.message)
-      }
-
-      // 2. Suppression base de données
-      const { error: dbError } = await supabase
-        .from('listings')
-        .delete()
-        .eq('id', id)
-
+      const { error: dbError } = await supabase.from('listings').delete().eq('id', id)
       if (dbError) throw dbError
       
-      toast.success("Annonce et photos supprimées")
+      toast.success("Annonce supprimée")
       setListings(prev => prev.filter(item => item.id !== id))
-
     } catch (e: any) {
-      toast.error("Erreur lors de la suppression : " + e.message)
+      toast.error("Erreur lors de la suppression")
     }
   }
 
   const togglePublish = async (id: number, currentStatus: boolean) => {
     try {
-      const { error } = await supabase
-        .from('listings')
-        .update({ is_published: !currentStatus })
-        .eq('id', id)
-
+      const { error } = await supabase.from('listings').update({ is_published: !currentStatus }).eq('id', id)
       if (error) throw error
-      
-      toast.success(currentStatus ? "Diffusion arrêtée" : "Annonce publiée")
+      toast.success(currentStatus ? "Hors ligne" : "En ligne")
       fetchMyListings()
     } catch (e: any) {
-      toast.error("Erreur : " + e.message)
+      toast.error("Erreur de mise à jour")
     }
   }
 
   const formatDate = (dateString: string) => {
-    return new Intl.DateTimeFormat('fr-FR', {
-      month: 'short',
-      year: '2-digit'
-    }).format(new Date(dateString)).replace('.', '')
+    return new Intl.DateTimeFormat('fr-FR', { month: 'short', year: '2-digit' }).format(new Date(dateString))
   }
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-100">
-        <Loader2 className="h-8 w-8 animate-spin text-rose-500" />
-      </div>
-    )
-  }
+  if (loading) return (
+    <div className="flex h-[80vh] items-center justify-center">
+      <Loader2 className="h-6 w-6 animate-spin text-gray-900" />
+    </div>
+  )
 
   return (
-    <div className="p-4 md:p-8 w-full max-w-none mx-auto space-y-6 font-sans">
-      <div className="flex justify-between items-center">
+    <div className="p-6 md:p-12 w-full max-w-7xl mx-auto bg-white min-h-screen font-sans">
+      
+      {/* HEADER MINIMALISTE */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-16 border-b border-gray-100 pb-8">
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-slate-900 uppercase">Mes annonces</h1>
-          <p className="text-slate-500 mt-1 text-sm font-medium">Gérez vos biens et vos mandats en temps réel.</p>
+          <h1 className="text-4xl font-light tracking-tight text-gray-900 mb-2">Mes Annonces</h1>
+          <p className="text-gray-400 text-sm tracking-wide uppercase">Gestion de parc immobilier</p>
         </div>
         <Link href="/dashboard/listings/edit/step-1">
-          <Button className="flex items-center gap-2 rounded-2xl bg-slate-900 hover:bg-black shadow-xl h-12 px-6 transition-all active:scale-95">
-            <Plus className="h-5 w-5" /> Nouvelle annonce
+          <Button className="rounded-none bg-gray-900 hover:bg-black text-white h-14 px-8 transition-all uppercase text-xs tracking-[0.2em] font-bold">
+            <Plus className="h-4 w-4 mr-2" /> Ajouter un bien
           </Button>
         </Link>
       </div>
 
-      <div className="rounded-[32px] border border-slate-100 bg-white shadow-sm overflow-hidden">
+      {/* TABLEAU EPURÉ */}
+      <div className="overflow-hidden">
         <Table>
-          <TableHeader className="bg-slate-50/50">
-            <TableRow className="hover:bg-transparent border-slate-100">
-              <TableHead className="w-20 font-bold text-slate-400 pl-6">Réf.</TableHead>
-              <TableHead className="font-bold text-slate-700">Date</TableHead>
-              <TableHead className="font-bold text-slate-700">Type de bien</TableHead>
-              <TableHead className="font-bold text-slate-700">Propriétaire</TableHead>
-              <TableHead className="text-right font-bold text-slate-700">Prix</TableHead>
-              <TableHead className="text-center font-bold text-slate-700">Diffusion</TableHead>
-              <TableHead className="text-right font-bold text-slate-700 px-6">Actions</TableHead>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent border-b border-gray-900 border-opacity-10">
+              <TableHead className="w-[80px] font-bold text-gray-400 text-[10px] uppercase tracking-widest px-0">Ref.</TableHead>
+              <TableHead className="font-bold text-gray-900 text-[10px] uppercase tracking-widest px-0">Détails du bien</TableHead>
+              <TableHead className="font-bold text-gray-900 text-[10px] uppercase tracking-widest px-0">Propriétaire</TableHead>
+              <TableHead className="text-right font-bold text-gray-900 text-[10px] uppercase tracking-widest px-0">Prix</TableHead>
+              <TableHead className="text-center font-bold text-gray-900 text-[10px] uppercase tracking-widest px-0">Statut</TableHead>
+              <TableHead className="text-right px-0"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {listings.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-40 text-center text-slate-400 italic">
-                  Aucun bien enregistré.
+                <TableCell colSpan={6} className="h-60 text-center text-gray-400 font-light">
+                  Aucun listing disponible actuellement.
                 </TableCell>
               </TableRow>
             ) : (
               listings.map((listing) => (
-                <TableRow key={listing.id} className="hover:bg-slate-50/30 transition-colors border-slate-50">
-                  <TableCell className="font-medium text-slate-400 text-xs pl-6">#{listing.id}</TableCell>
-                  
-                  <TableCell className="whitespace-nowrap capitalize text-slate-500 font-bold text-sm">
-                    {formatDate(listing.created_at)}
+                <TableRow key={listing.id} className="group hover:bg-gray-50/50 transition-colors border-b border-gray-50">
+                  <TableCell className="text-gray-400 text-xs font-light px-0 py-6">
+                    {listing.id}
                   </TableCell>
-
-                  <TableCell>
+                  
+                  <TableCell className="px-0 py-6">
                     <div className="flex flex-col">
-                      <span className="font-black text-slate-900 leading-none uppercase text-sm">{listing.property_type}</span>
-                      <span className="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1 font-bold">
-                        <MapPin size={12} /> {listing.city}
+                      <span className="font-medium text-gray-900 text-base">{listing.property_type}</span>
+                      <span className="text-xs text-gray-400 flex items-center gap-1 mt-1">
+                        <MapPin size={12} className="text-gray-300" /> {listing.city} — {formatDate(listing.created_at)}
                       </span>
                     </div>
                   </TableCell>
 
-                  <TableCell>
+                  <TableCell className="px-0 py-6">
                     <div className="flex flex-col">
-                      <span className="text-sm font-bold text-slate-700 leading-none">{listing.owner_name || "—"}</span>
+                      <span className="text-sm text-gray-700">{listing.owner_name || "—"}</span>
                       {listing.owner_phone && (
-                        <span className="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1 font-bold">
-                          <Phone size={12} /> {listing.owner_phone}
+                        <span className="text-[11px] text-gray-400 flex items-center gap-1 mt-1">
+                          <Phone size={10} /> {listing.owner_phone}
                         </span>
                       )}
                     </div>
                   </TableCell>
                   
-                  <TableCell className="text-right font-black text-slate-900 whitespace-nowrap">
+                  <TableCell className="text-right font-medium text-gray-900 px-0 py-6">
                     {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(listing.price)}
                   </TableCell>
 
-                  <TableCell className="text-center">
-                    {listing.is_published ? (
-                      <div className="flex items-center justify-center gap-1.5 text-emerald-600 font-black text-[10px] uppercase tracking-wider">
-                        <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                        En ligne
-                      </div>
-                    ) : (
-                      <span className="text-slate-300 font-bold text-[10px] uppercase tracking-wider">Hors ligne</span>
-                    )}
+                  <TableCell className="text-center px-0 py-6">
+                    <div className="inline-flex items-center justify-center gap-2">
+                      <span className={`h-1.5 w-1.5 rounded-full ${listing.is_published ? 'bg-green-500' : 'bg-gray-200'}`} />
+                      <span className={`text-[10px] uppercase tracking-widest font-bold ${listing.is_published ? 'text-gray-900' : 'text-gray-300'}`}>
+                        {listing.is_published ? 'En ligne' : 'Hors ligne'}
+                      </span>
+                    </div>
                   </TableCell>
 
-                  <TableCell className="text-right px-6">
+                  <TableCell className="text-right px-0 py-6">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-10 w-10 p-0 hover:bg-slate-100 rounded-xl transition-all">
-                          <MoreHorizontal className="h-5 w-5 text-slate-400" />
+                        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-gray-900 hover:text-white rounded-none transition-all">
+                          <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl border-slate-100 shadow-2xl">
-                        {/* LIEN VERS SITE PUBLIC MODIFIÉ ICI */}
-                        <DropdownMenuItem asChild className="rounded-xl py-2.5 font-bold">
-                          <a 
-                            href={`${PUBLIC_SITE_URL}/listings/${listing.id}`} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="flex items-center w-full"
-                          >
-                            <Eye className="mr-3 h-4 w-4" /> Voir l'annonce
+                      <DropdownMenuContent align="end" className="w-48 rounded-none border-gray-100 shadow-xl p-0">
+                        <DropdownMenuItem asChild className="rounded-none py-3 cursor-pointer">
+                          <a href={`${PUBLIC_SITE_URL}/listings/${listing.id}`} target="_blank" className="flex items-center">
+                            <ExternalLink className="mr-2 h-4 w-4 text-gray-400" /> Voir l'annonce
                           </a>
                         </DropdownMenuItem>
-                        
-                        <DropdownMenuItem asChild className="rounded-xl py-2.5 font-bold">
-                          <Link href={`/dashboard/listings/${listing.id}/edit/step-1`}>
-                            <Edit3 className="mr-3 h-4 w-4" /> Modifier
+                        <DropdownMenuItem asChild className="rounded-none py-3 cursor-pointer">
+                          <Link href={`/dashboard/listings/${listing.id}/edit/step-1`} className="flex items-center">
+                            <Edit3 className="mr-2 h-4 w-4 text-gray-400" /> Modifier
                           </Link>
                         </DropdownMenuItem>
-                        
-                        <DropdownMenuSeparator className="my-1 bg-slate-50" />
-                        
+                        <DropdownMenuSeparator className="m-0" />
                         <DropdownMenuItem 
                           onClick={() => togglePublish(listing.id, listing.is_published)}
-                          className={`rounded-xl py-2.5 font-bold ${listing.is_published ? 'text-orange-500' : 'text-emerald-600'}`}
+                          className="rounded-none py-3 cursor-pointer"
                         >
                           {listing.is_published ? (
-                            <><PowerOff className="mr-3 h-4 w-4" /> Suspendre</>
+                            <><PowerOff className="mr-2 h-4 w-4 text-orange-400" /> Suspendre</>
                           ) : (
-                            <><Power className="mr-3 h-4 w-4" /> Publier</>
+                            <><Power className="mr-2 h-4 w-4 text-green-500" /> Publier</>
                           )}
                         </DropdownMenuItem>
-
-                        <DropdownMenuSeparator className="my-1 bg-slate-50" />
-                        
+                        <DropdownMenuSeparator className="m-0" />
                         <DropdownMenuItem 
                           onClick={() => deleteListing(listing.id)}
-                          className="rounded-xl py-2.5 font-bold text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-700"
+                          className="rounded-none py-3 cursor-pointer text-red-500 focus:text-red-600 focus:bg-red-50"
                         >
-                          <Trash2 className="mr-3 h-4 w-4" /> Supprimer
+                          <Trash2 className="mr-2 h-4 w-4" /> Supprimer
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

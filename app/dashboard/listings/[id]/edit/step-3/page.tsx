@@ -6,11 +6,11 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useListing } from '@/context/ListingContext'
 import { useDebounce } from '@/hooks/useDebounce'
+import { Loader2, ArrowRight, MapPin, Check, Info } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { MapPin, CheckCircle2, ShieldCheck } from 'lucide-react'
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
 
@@ -39,6 +39,7 @@ export default function Step3Page() {
 
   const debouncedQuery = useDebounce(query, 300)
 
+  // Synchronisation avec les données existantes du listing
   React.useEffect(() => {
     if (listing) {
       setAddressData({
@@ -56,6 +57,7 @@ export default function Step3Page() {
     }
   }, [listing])
 
+  // Fetch des suggestions Mapbox
   React.useEffect(() => {
     const fetchSuggestions = async () => {
       if (!debouncedQuery || debouncedQuery.length < 3 || addressData.latitude) {
@@ -101,13 +103,12 @@ export default function Step3Page() {
     }))
     setQuery(s.name)
     setShowSuggestions(false)
-    toast.success("Adresse sélectionnée")
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!addressData.latitude) {
-      toast.error("Veuillez sélectionner une adresse")
+      toast.error("Veuillez sélectionner une adresse valide dans la liste")
       return
     }
 
@@ -140,134 +141,160 @@ export default function Step3Page() {
     }
   }
 
-  const airbnbInput = "h-14 text-lg border-gray-200 rounded-xl focus-visible:ring-1 focus-visible:ring-black focus-visible:border-black transition-all"
+  const minimalInput = "rounded-none border-0 border-b border-gray-200 focus-visible:ring-0 focus-visible:border-gray-900 px-0 h-12 text-lg transition-colors bg-transparent shadow-none w-full"
 
-  if (contextLoading) return <div className="p-20 text-center animate-pulse text-gray-400">Chargement des données...</div>
+  if (contextLoading) return (
+    <div className="flex h-[60vh] items-center justify-center">
+      <Loader2 className="h-6 w-6 animate-spin text-gray-900" />
+    </div>
+  )
 
   return (
-    <div className="w-full max-w-xl mx-auto pt-12 pb-20 px-6 font-sans">
-      <div className="mb-8 space-y-2">
-        
-        <h1 className="text-3xl font-semibold text-gray-900 tracking-tight">Où se situe votre bien ?</h1>
-        <span className="text-sm font-bold  uppercase tracking-widest">Étape 3 sur 6</span>
-       <p className="text-sm text-gray-600 leading-relaxed max-w-md">
-    À cette étape, il convient de saisir l'adresse du bien. 
-    Vous pouvez choisir ci-dessous de présenter votre bien de façon exacte 
-    sur une carte ou dans un rayon de 500 mètres de façon aléatoire.
-  </p>
+    <div className="p-6 md:p-12 w-full max-w-5xl mx-auto bg-white min-h-screen font-sans">
+      
+      {/* HEADER */}
+      <div className="mb-20 border-b border-gray-100 pb-8">
+        <p className="text-[10px] tracking-[0.3em] uppercase font-bold text-gray-400 mb-2">Étape 03 / 08</p>
+        <h1 className="text-4xl font-light tracking-tight text-gray-900">Localisation</h1>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-24">
         
-        {/* RECHERCHE D'ADRESSE */}
-        <div className="space-y-2 relative">
-          <Label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Adresse</Label>
-          <Input
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value)
-              setAddressData(prev => ({ ...prev, latitude: null }))
-            }}
-            placeholder="Saisissez l'adresse complète..."
-            className={airbnbInput}
-          />
-
-          {showSuggestions && suggestions.length > 0 && (
-            <div className="absolute z-50 w-full bg-white border border-gray-100 rounded-xl shadow-2xl mt-1 overflow-hidden">
-              {suggestions.map((s, i) => (
-                <div
-                  key={i}
-                  onClick={() => handleSelect(s)}
-                  className="p-4 hover:bg-gray-50 cursor-pointer border-b last:border-0 transition-colors"
-                >
-                  <p className="font-medium text-gray-900 text-sm">{s.name}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* VILLE & CP */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Ville</Label>
-            <Input value={addressData.city} readOnly className={`${airbnbInput} bg-gray-50 text-gray-500 cursor-not-allowed`} />
+        {/* --- SECTION RECHERCHE --- */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-12">
+          <div className="md:col-span-1">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-2">Adresse du bien</h3>
+            <p className="text-xs text-gray-400 leading-relaxed">
+              Saisissez l'adresse pour géolocaliser votre bien. La ville et le code postal seront remplis automatiquement.
+            </p>
           </div>
-          <div className="space-y-2">
-            <Label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Code Postal</Label>
-            <Input value={addressData.zip_code} readOnly className={`${airbnbInput} bg-gray-50 text-gray-500 cursor-not-allowed`} />
-          </div>
-        </div>
-
-        {/* PAYS */}
-        <div className="space-y-2">
-          <Label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Pays</Label>
-          <Input value={addressData.country} readOnly className={`${airbnbInput} bg-gray-50 text-gray-500 cursor-not-allowed`} />
-        </div>
-
-        {/* QUARTIER / ARRONDISSEMENT */}
-        <div className="space-y-2">
-          <Label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Quartier ou lieu-dit (optionnel)</Label>
-          <Input 
-            value={addressData.neighborhood} 
-            onChange={(e) => setAddressData({...addressData, neighborhood: e.target.value})}
-            placeholder="Ex: Le Marais, 8ème arr..." 
-            className={airbnbInput} 
-          />
-        </div>
-
-        <hr className="my-8 border-gray-100" />
-
-        {/* VISIBILITÉ */}
-        <div className="space-y-4">
-          <Label className="text-sm font-bold text-gray-900">Affichage public sur la carte</Label>
           
-          <div className="grid gap-3">
-            <div 
-              onClick={() => setAddressData({...addressData, address_visibility: '500m'})}
-              className={`flex items-center gap-4 p-6 rounded-2xl border-2 transition-all ${addressData.address_visibility === '500m' ? 'border-black bg-gray-50' : 'border-gray-100 hover:border-gray-200'}`}
-            >
-              <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center ${addressData.address_visibility === '500m' ? 'border-black' : 'border-gray-300'}`}>
-                {addressData.address_visibility === '500m' && <div className="h-3 w-3 bg-black rounded-full" />}
+          <div className="md:col-span-2 space-y-10">
+            <div className="space-y-2 relative">
+              <Label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Recherche d'adresse</Label>
+              <div className="relative">
+                <Input
+                  value={query}
+                  onChange={(e) => {
+                    setQuery(e.target.value)
+                    setAddressData(prev => ({ ...prev, latitude: null }))
+                  }}
+                  placeholder="Ex: 12 rue de la Paix, Paris..."
+                  className={minimalInput}
+                />
+                <MapPin className="absolute right-0 top-3 h-4 w-4 text-gray-300" />
               </div>
-              <div>
-                <p className="font-semibold text-sm">Zone floutée (Recommandé)</p>
-                <p className="text-xs text-gray-500">Un rayon de 500m sans l'adresse exacte.</p>
+
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute z-50 w-full bg-white border border-gray-100 shadow-2xl mt-1 overflow-hidden">
+                  {suggestions.map((s, i) => (
+                    <div 
+                      key={i} 
+                      onClick={() => handleSelect(s)} 
+                      className="p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-50 transition-colors text-sm text-gray-600"
+                    >
+                      {s.name}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-10">
+              <div className="space-y-2">
+                <Label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Ville</Label>
+                <Input value={addressData.city} readOnly className={`${minimalInput} opacity-50 cursor-not-allowed`} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Code Postal</Label>
+                <Input value={addressData.zip_code} readOnly className={`${minimalInput} opacity-50 cursor-not-allowed`} />
               </div>
             </div>
 
-            <div 
-              onClick={() => setAddressData({...addressData, address_visibility: 'exact'})}
-              className={`flex items-center gap-4 p-6 rounded-2xl border-2 transition-all ${addressData.address_visibility === 'exact' ? 'border-black bg-gray-50' : 'border-gray-100 hover:border-gray-200'}`}
-            >
-              <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center ${addressData.address_visibility === 'exact' ? 'border-black' : 'border-gray-300'}`}>
-                {addressData.address_visibility === 'exact' && <div className="h-3 w-3 bg-black rounded-full" />}
-              </div>
-              <div>
-                <p className="font-semibold text-sm">Adresse exacte</p>
-                <p className="text-xs text-gray-500">Marqueur précis sur l'emplacement du bien.</p>
-              </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Quartier ou lieu-dit (Optionnel)</Label>
+              <Input 
+                value={addressData.neighborhood} 
+                onChange={(e) => setAddressData({...addressData, neighborhood: e.target.value})}
+                placeholder="Ex: Écusson, Le Marais..." 
+                className={minimalInput} 
+              />
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* STATUS GPS */}
-        {addressData.latitude && (
-          <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl text-emerald-700 flex items-center gap-3">
-            <CheckCircle2 className="h-5 w-5" />
-            <span className="text-xs font-bold uppercase">Position GPS enregistrée</span>
+        {/* --- SECTION CONFIDENTIALITÉ --- */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-12 border-t border-gray-50 pt-16">
+          <div className="md:col-span-1">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-2">Confidentialité</h3>
+            <p className="text-xs text-gray-400 leading-relaxed">
+              Choisissez comment le bien apparaît sur la carte publique pour les visiteurs.
+            </p>
           </div>
-        )}
+          
+          <div className="md:col-span-2">
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div 
+                  onClick={() => setAddressData({...addressData, address_visibility: '500m'})}
+                  className={`p-6 border transition-all cursor-pointer ${addressData.address_visibility === '500m' ? 'border-gray-900 bg-white shadow-sm' : 'border-gray-100 hover:border-gray-300 text-gray-400'}`}
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div className={`h-4 w-4 rounded-full border flex items-center justify-center ${addressData.address_visibility === '500m' ? 'border-gray-900' : 'border-gray-200'}`}>
+                      {addressData.address_visibility === '500m' && <div className="h-1.5 w-1.5 bg-gray-900 rounded-full" />}
+                    </div>
+                    <Info className="h-4 w-4" />
+                  </div>
+                  <p className="text-sm font-bold uppercase tracking-wider mb-1">Zone floutée</p>
+                  <p className="text-[11px] leading-relaxed">Rayon de 500m aléatoire autour du bien.</p>
+                </div>
 
-        <div className="pt-10 border-t flex items-center justify-between">
-          <button type="button" onClick={() => router.back()} className="text-sm font-bold underline text-gray-900">Retour</button>
-          <Button 
-            type="submit" 
-            disabled={loading || !addressData.latitude} 
-            className="h-14 px-12 bg-rose-500 hover:bg-rose-600 text-white rounded-xl shadow-lg font-bold"
+                <div 
+                  onClick={() => setAddressData({...addressData, address_visibility: 'exact'})}
+                  className={`p-6 border transition-all cursor-pointer ${addressData.address_visibility === 'exact' ? 'border-gray-900 bg-white shadow-sm' : 'border-gray-100 hover:border-gray-300 text-gray-400'}`}
+                >
+                   <div className="flex justify-between items-start mb-4">
+                    <div className={`h-4 w-4 rounded-full border flex items-center justify-center ${addressData.address_visibility === 'exact' ? 'border-gray-900' : 'border-gray-200'}`}>
+                      {addressData.address_visibility === 'exact' && <div className="h-1.5 w-1.5 bg-gray-900 rounded-full" />}
+                    </div>
+                    <MapPin className="h-4 w-4" />
+                  </div>
+                  <p className="text-sm font-bold uppercase tracking-wider mb-1">Point exact</p>
+                  <p className="text-[11px] leading-relaxed">Affichage précis du marqueur sur la carte.</p>
+                </div>
+             </div>
+          </div>
+        </section>
+
+        {/* --- FOOTER --- */}
+        <div className="pt-10 border-t border-gray-900 border-opacity-10 flex items-center justify-between pb-20">
+          <button 
+            type="button" 
+            onClick={() => router.back()} 
+            className="text-[10px] uppercase tracking-[0.2em] font-bold text-gray-400 hover:text-gray-900 transition-colors"
           >
-            {loading ? "Enregistrement..." : "Suivant"}
-          </Button>
+            Retour
+          </button>
+          
+          <div className="flex items-center gap-6">
+            {addressData.latitude && (
+              <div className="hidden md:flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-emerald-500">
+                <Check className="h-3 w-3" /> Position validée
+              </div>
+            )}
+            <Button 
+              type="submit" 
+              disabled={loading || !addressData.latitude} 
+              className="rounded-none bg-gray-900 hover:bg-black text-white h-14 px-12 transition-all uppercase text-xs tracking-[0.2em] font-bold disabled:opacity-20"
+            >
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <span className="flex items-center gap-2">
+                  Suivant <ArrowRight className="h-4 w-4" />
+                </span>
+              )}
+            </Button>
+          </div>
         </div>
       </form>
     </div>

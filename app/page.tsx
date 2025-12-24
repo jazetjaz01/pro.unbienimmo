@@ -1,55 +1,59 @@
 import { LoginForm } from "@/components/login-form";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { ArrowUpRight, Table } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center">
-      <Badge
-        variant="secondary"
-        className="rounded-full py-1 border-border"
-        asChild
-      >
-        <Link href="#">
-          Just released v1.0.0 <ArrowUpRight className="ml-1 size-4" />
-        </Link>
-      </Badge>
-
-      <h1 className="mt-6 text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tighter">
-        Bienvenue à votre espace client
-      </h1>
-
-      <p className="mt-6 md:text-lg text-foreground/80 max-w-xl">
-       Vous pouvez de cette espage gérér l'ensemble de votre diffusion sur unbienimmo.com
-      </p>
-
-      <div className="mt-8 flex gap-4">
-        <Button size="lg" className="rounded-full">
-          Je souhaite m'abonner <ArrowUpRight className="size-5" />
-        </Button>
-       <Button
-  asChild
-  variant="outline"
-  size="lg"
-  className="rounded-full"
->
-  <Link
-    href="https://www.unbienimmo.com"
-    className="flex items-center gap-2"
-  >
-    <Table className="size-5" />
-    <span>Vos annonces</span>
-  </Link>
-</Button>
-
+    <div className="min-h-screen flex flex-col items-center justify-center bg-white px-6 font-sans selection:bg-gray-900 selection:text-white">
+      
+      {/* HEADER / LOGO (Optionnel, à adapter selon votre marque) */}
+      <div className="absolute top-12 left-12">
+        <p className="text-[10px] tracking-[0.4em] uppercase font-bold text-gray-900">
+          UnBienImmo
+        </p>
       </div>
 
-      {/* LOGIN FORM CENTRÉ */}
-      <div className="mt-12 w-full max-w-md">
-        <LoginForm />
+      <div className="w-full max-w-lg flex flex-col items-center">
+        
+        {/* TITRE ÉDITORIAL */}
+        <div className="text-center mb-16 space-y-6">
+          <p className="text-[10px] tracking-[0.3em] uppercase font-bold text-gray-400">
+            Portail Partenaire
+          </p>
+          <h1 className="text-4xl md:text-6xl font-light tracking-tighter text-gray-900 italic">
+            Espace Client
+          </h1>
+          <div className="w-12 h-[1px] bg-gray-900 mx-auto mt-8"></div>
+        </div>
+
+        {/* TEXTE D'INTRODUCTION */}
+        <p className="text-sm md:text-base text-gray-500 max-w-sm text-center leading-relaxed font-light mb-12">
+          Gérez l'intégralité de votre diffusion immobilière et optimisez vos performances depuis votre interface dédiée.
+        </p>
+
+        {/* LOGIN FORM (Le container est épuré) */}
+        <div className="w-full border-t border-gray-100 pt-12">
+          <LoginForm />
+        </div>
+
+        {/* FOOTER DISCRET */}
+        <div className="mt-16 flex flex-col items-center gap-6">
+          <Link 
+            href="https://www.unbienimmo.com" 
+            className="group flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] font-bold text-gray-400 hover:text-gray-900 transition-colors"
+          >
+            Retour au site principal
+            <ArrowUpRight className="size-3 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1 group-hover:-translate-y-1" />
+          </Link>
+          
+          <p className="text-[9px] text-gray-300 uppercase tracking-widest">
+            © 2025 UNBIENIMMO. TOUS DROITS RÉSERVÉS.
+          </p>
+        </div>
       </div>
+
+      {/* DÉCORATION MINIMALISTE (Lignes de fuite) */}
+      <div className="fixed inset-0 pointer-events-none border-[1rem] border-white z-50"></div>
     </div>
   );
 }
