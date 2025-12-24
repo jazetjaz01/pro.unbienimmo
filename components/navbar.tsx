@@ -14,7 +14,7 @@ const Navbar = () => {
             <Logo />
             <div className="flex gap-0.5 ">
             <span className=" text-xl  hidden md:block text-orange-600 font-bold">pro.</span>
-            <span className="font-sarina text-lg  hidden md:block">unbienimmo</span>
+            <span className="font-sarina text-lg  hidden md:block pt-0.5">unbienimmo</span>
             </div>
           </Link>
         
