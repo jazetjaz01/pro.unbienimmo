@@ -2,11 +2,19 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
+  const pathname = request.nextUrl.pathname
+
+  // ✅ EXCEPTION : On laisse passer Stripe sans aucune redirection ni vérification
+  // On vérifie avec et sans le "s" pour être totalement sécurisé
+  if (pathname.startsWith('/api/webhook/stripe') || pathname.startsWith('/api/webhooks/stripe')) {
+    return NextResponse.next()
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, // ✅ UTILISEZ LA CLÉ ANON ICI
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll() { return request.cookies.getAll() },
@@ -21,9 +29,7 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // IMPORTANT: Ne pas utiliser de destructuration directe ici pour éviter les erreurs si data est null
   const { data: { user } } = await supabase.auth.getUser()
-  const pathname = request.nextUrl.pathname
 
   // 1. Définition des zones de navigation
   const isAuthPage = pathname.startsWith('/auth') || pathname.startsWith('/login')
@@ -39,7 +45,6 @@ export async function updateSession(request: NextRequest) {
 
   // 3. LOGIQUE POUR UTILISATEUR CONNECTÉ
   if (user) {
-    // Vérifier si nous sommes sur une page d'auth en étant connecté
     if (isAuthPage) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
@@ -60,31 +65,23 @@ export async function updateSession(request: NextRequest) {
       return supabaseResponse
     }
 
-    // B. GESTION DES ACCÈS (DASHBOARD & ONBOARDING)
     const isInsideDashboard = pathname.startsWith('/dashboard')
     const isOnboardingProcess = pathname.startsWith('/dashboard/onboarding')
-
-    // On autorise si : pro OU admin OU en train de faire l'onboarding
     const hasAccessPermission = profile?.is_pro || profile?.is_admin || isOnboardingProcess
 
     if (isInsideDashboard && !hasAccessPermission) {
       return NextResponse.redirect(new URL('/access-denied', request.url))
     }
 
-    // C. LOGIQUE DE REDIRECTION PAR ÉTAPE
     if (isInsideDashboard) {
-      // Force le formulaire si step 1
       if (step === 1 && !isOnboardingProcess) {
         return NextResponse.redirect(new URL('/dashboard/onboarding', request.url))
       }
-
-      // Empêche le retour à l'onboarding si fini (ex: après step 4 ou 5 selon votre logique)
       if (step >= 5 && isOnboardingProcess) {
         return NextResponse.redirect(new URL('/dashboard', request.url))
       }
     }
     
-    // Empêcher l'accès à la page de choix si déjà fait
     if (step > 0 && isOnboardingChoicePage) {
        return NextResponse.redirect(new URL('/dashboard', request.url))
     }
