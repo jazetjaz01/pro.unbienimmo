@@ -8,7 +8,7 @@ import { AuthButton } from "./auth-button";
 const Navbar = () => {
   return (
     <nav className="h-16 bg-background border-b">
-      <div className="h-full flex items-center justify-between max-w-(--breakpoint-xl) mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="h-full flex items-center justify-between  mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-12">
           <Logo />
 
