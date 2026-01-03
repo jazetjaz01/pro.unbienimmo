@@ -5,7 +5,7 @@ import Stripe from "stripe";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2024-12-18.acacia" as any, // Utilisez une version stable
 });
-
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pro.unbienimmo.com";
 const PRICE_IDS: Record<string, string> = {
   essentiel: process.env.STRIPE_PRICE_ID_ESSENTIEL!,
   professionnel: process.env.STRIPE_PRICE_ID_PRO!,
@@ -32,8 +32,8 @@ export async function POST(req: Request) {
       customer_email: user.email,
       line_items: [{ price: priceId, quantity: 1 }],
       mode: "subscription",
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/onboarding/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/onboarding/plan`,
+      success_url: `${baseUrl}/dashboard/onboarding/success?session_id={CHECKOUT_SESSION_ID}`,
+  cancel_url: `${baseUrl}/dashboard/onboarding/plan`,
       metadata: { userId: user.id, packId: packId },
     });
 
