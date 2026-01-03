@@ -8,15 +8,22 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 export async function POST(req: Request) {
+  console.log("🔥 Stripe webhook appelé");
+
+  // 1. Lecture du body brut (OBLIGATOIRE pour Stripe)
   const body = await req.text();
-  const signature = req.headers.get("stripe-signature");
+
+  // 2. Récupération de la signature Stripe
+  const signature = headers().get("stripe-signature");
 
   if (!signature) {
-    return new NextResponse("No signature", { status: 400 });
+    console.error("❌ Signature Stripe absente");
+    return new NextResponse("No Stripe signature", { status: 400 });
   }
 
   let event: Stripe.Event;
 
+  // 3. Vérification de la signature
   try {
     event = stripe.webhooks.constructEvent(
       body,
@@ -24,56 +31,82 @@ export async function POST(req: Request) {
       process.env.STRIPE_WEBHOOK_SECRET!
     );
   } catch (err: any) {
-    console.error(`❌ Erreur de signature Webhook: ${err.message}`);
+    console.error("❌ Erreur de vérification Stripe:", err.message);
     return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
   }
 
+  console.log("📦 Event reçu:", event.type);
+
+  // 4. Initialisation Supabase ADMIN
   const supabase = createAdminClient();
 
-  // Traitement de l'événement
+  // 5. Traitement du checkout
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
-    
-    // Extraction précise selon votre JSON
+
+    // Sécurité minimale
+    if (session.payment_status !== "paid") {
+      console.log("⏳ Paiement non confirmé");
+      return NextResponse.json({ received: true });
+    }
+
     const userId = session.metadata?.userId;
-    const profId = session.metadata?.profId;
     const packId = session.metadata?.packId;
 
-    console.log("🔔 Webhook Checkout Reçu :", { userId, profId, packId });
+    console.log("🧾 Metadata reçues:", { userId, packId });
 
-    if (userId && profId) {
-      // 1. Mise à jour de la table PROFILES
-      const { error: errorProfile } = await supabase
-        .from("profiles")
-        .update({ 
-          onboarding_step: 5, 
-          is_pro: true 
-        })
-        .eq("id", userId);
+    if (!userId) {
+      console.error("❌ userId manquant dans les metadata");
+      return NextResponse.json({ received: true });
+    }
 
-      if (errorProfile) console.error("❌ Erreur Profile Update:", errorProfile);
+    // -------------------------
+    // 6. UPDATE PROFILES
+    // -------------------------
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .update({
+        onboarding_step: 5,
+        is_pro: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", userId)
+      .select();
 
-      // 2. Mise à jour de la table PROFESSIONALS
-      // Note : on remplit aussi 'legal_name' avec le nom de facturation Stripe
-      const { error: errorProf } = await supabase
+    if (profileError) {
+      console.error("❌ Erreur update profiles:", profileError);
+    } else {
+      console.log("✅ Profile mis à jour:", profileData);
+    }
+
+    // -------------------------
+    // 7. UPDATE PROFESSIONALS
+    // IMPORTANT : jointure sur owner_id
+    // -------------------------
+    const { data: professionalData, error: professionalError } =
+      await supabase
         .from("professionals")
-        .update({ 
+        .update({
           stripe_customer_id: session.customer as string,
-          subscription_status: 'active',
-          subscription_plan: packId,
+          subscription_status: "active",
+          subscription_plan: packId ?? null,
           is_active: true,
           legal_name: session.customer_details?.name || null,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
-        .eq("id", profId);
+        .eq("owner_id", userId)
+        .select();
 
-      if (errorProf) console.error("❌ Erreur Professionals Update:", errorProf);
-
-      if (!errorProfile && !errorProf) {
-        console.log("✅ BRAVO : Les tables sont synchronisées !");
-      }
+    if (professionalError) {
+      console.error(
+        "❌ Erreur update professionals:",
+        professionalError
+      );
     } else {
-      console.error("⚠️ Metadata manquantes dans la session Stripe.");
+      console.log(
+        "✅ Professional mis à jour:",
+        professionalData
+      );
     }
   }
 
