@@ -9,25 +9,21 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 export async function POST(req: Request) {
   console.log("🔥 Stripe webhook appelé");
 
-  // 1️⃣ Lecture du body brut (OBLIGATOIRE)
   const body = await req.text();
-
-  // 2️⃣ Signature Stripe (UTILISER req.headers)
   const signature = req.headers.get("stripe-signature");
 
-  if (!signature) {
-    console.error("❌ Signature Stripe absente");
-    return new NextResponse("No Stripe signature", { status: 400 });
+  if (!signature || !process.env.STRIPE_WEBHOOK_SECRET) {
+    console.error("❌ Signature ou Secret Webhook manquant");
+    return new NextResponse("Configuration Error", { status: 400 });
   }
 
-  // 3️⃣ Vérification de la signature Stripe
   let event: Stripe.Event;
 
   try {
     event = stripe.webhooks.constructEvent(
       body,
       signature,
-      process.env.STRIPE_WEBHOOK_SECRET!
+      process.env.STRIPE_WEBHOOK_SECRET
     );
   } catch (err: any) {
     console.error("❌ Erreur de vérification Stripe:", err.message);
@@ -36,33 +32,33 @@ export async function POST(req: Request) {
 
   console.log("📦 Event reçu:", event.type);
 
-  // 4️⃣ On ne crée Supabase QUE si nécessaire
   if (event.type !== "checkout.session.completed") {
     return NextResponse.json({ received: true });
   }
 
   const session = event.data.object as Stripe.Checkout.Session;
 
-  // 5️⃣ Sécurité paiement
   if (session.payment_status !== "paid") {
     console.log("⏳ Paiement non confirmé");
     return NextResponse.json({ received: true });
   }
 
+  // Extraction des metadata (bien utiliser userId et profId du JSON)
   const userId = session.metadata?.userId;
+  const profId = session.metadata?.profId;
   const packId = session.metadata?.packId ?? null;
 
-  console.log("🧾 Metadata reçues:", { userId, packId });
+  console.log("🧾 Metadata reçues:", { userId, profId, packId });
 
-  if (!userId) {
-    console.error("❌ userId manquant dans les metadata");
+  if (!userId || !profId) {
+    console.error("❌ IDs manquants dans les metadata");
     return NextResponse.json({ received: true });
   }
 
   const supabase = createAdminClient();
 
   // -------------------------
-  // 6️⃣ UPDATE PROFILES
+  // 1️⃣ UPDATE PROFILES
   // -------------------------
   const { data: profileData, error: profileError } = await supabase
     .from("profiles")
@@ -74,31 +70,28 @@ export async function POST(req: Request) {
     .eq("id", userId)
     .select();
 
-  console.log("🧠 PROFILE UPDATE:", profileData, profileError);
+  if (profileError) console.error("❌ Erreur Profile:", profileError);
+  console.log("🧠 PROFILE UPDATE SUCCESS:", profileData);
 
   // -------------------------
-  // 7️⃣ UPDATE PROFESSIONALS
-  // jointure correcte = owner_id
+  // 2️⃣ UPDATE PROFESSIONALS
+  // On utilise l'ID de la table pour une précision maximale
   // -------------------------
-  const { data: professionalData, error: professionalError } =
-  await supabase
+  const { data: professionalData, error: professionalError } = await supabase
     .from("professionals")
-    .upsert({
-      owner_id: userId, // La clé pour trouver/créer
+    .update({
       stripe_customer_id: session.customer as string,
       subscription_status: "active",
       subscription_plan: packId,
       is_active: true,
       legal_name: session.customer_details?.name || null,
       updated_at: new Date().toISOString(),
-    }, { onConflict: 'owner_id' }) // On se base sur owner_id pour savoir si on crée ou update
+    })
+    .eq("id", profId) // Utilisation de l'ID primaire de la table professionals
     .select();
 
-  console.log(
-    "🏢 PROFESSIONAL UPDATE:",
-    professionalData,
-    professionalError
-  );
+  if (professionalError) console.error("❌ Erreur Professional:", professionalError);
+  console.log("🏢 PROFESSIONAL UPDATE SUCCESS:", professionalData);
 
   return NextResponse.json({ received: true });
 }
