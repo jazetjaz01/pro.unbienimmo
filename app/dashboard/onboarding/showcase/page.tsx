@@ -1,282 +1,294 @@
-"use client"
+"use client";
 
-import { useEffect, useState, useCallback } from 'react'
-import { useDropzone } from 'react-dropzone'
-import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Loader2, Upload, ImageIcon, Store, Check, AlertCircle, ArrowLeft, ArrowRight } from 'lucide-react'
-import Link from 'next/link'
-import { cn } from "@/lib/utils"
+import { useEffect, useState, useCallback } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Loader2, Upload, ImageIcon, ArrowLeft, ArrowRight, AlertCircle, Check } from 'lucide-react';
+import Link from 'next/link';
+import { cn } from "@/lib/utils";
 
-// --- COMPOSANT DROPZONE PERSONNALISÉ ---
-function FileDropzone({ label, value, onUpload, aspect = "square" }: { label: string, value: string, onUpload: (file: File) => Promise<void>, aspect?: "square" | "video" }) {
-  const [isUploading, setIsUploading] = useState(false)
+// --- COMPOSANT DROPZONE STYLE AIRBNB ---
+function FileDropzone({ label, value, onUpload, aspect = "square", description }: { label: string, value: string, onUpload: (file: File) => Promise<void>, aspect?: "square" | "video", description?: string }) {
+  const [isUploading, setIsUploading] = useState(false);
   
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
-      setIsUploading(true)
-      await onUpload(acceptedFiles[0])
-      setIsUploading(false)
+      setIsUploading(true);
+      await onUpload(acceptedFiles[0]);
+      setIsUploading(false);
     }
-  }, [onUpload])
+  }, [onUpload]);
   
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
     onDrop, 
     accept: { 'image/*': ['.jpeg', '.jpg', '.png', '.webp', '.svg'] }, 
     multiple: false 
-  })
+  });
 
   return (
     <div className="space-y-3 w-full">
-      <Label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">{label}</Label>
+      <div className="flex flex-col">
+        <label className="text-sm font-medium text-zinc-900">{label}</label>
+        {description && <p className="text-xs text-zinc-500">{description}</p>}
+      </div>
       <div {...getRootProps()} className={cn(
-        "relative group flex flex-col items-center justify-center border border-gray-100 transition-all duration-500 cursor-pointer overflow-hidden",
-        aspect === 'square' ? 'aspect-square max-w-[160px]' : 'aspect-video w-full',
-        isDragActive ? 'bg-orange-50 border-orange-500' : 'bg-white hover:border-gray-900'
+        "relative group flex flex-col items-center justify-center border-2 border-dashed transition-all duration-300 cursor-pointer overflow-hidden rounded-2xl",
+        aspect === 'square' ? 'aspect-square max-w-[200px]' : 'aspect-video w-full',
+        isDragActive ? 'border-black bg-zinc-50' : 'border-zinc-200 hover:border-zinc-400 bg-zinc-50/50'
       )}>
         <input {...getInputProps()} />
         {isUploading ? (
-          <Loader2 className="h-5 w-5 animate-spin text-orange-600" />
+          <div className="flex flex-col items-center gap-2">
+            <Loader2 className="h-6 w-6 animate-spin text-zinc-900" />
+            <span className="text-xs font-medium">Téléchargement...</span>
+          </div>
         ) : value ? (
           <>
-            <img src={value} alt="Preview" className="w-full h-full object-cover transition-all group-hover:scale-105" />
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-              <Upload className="text-white h-5 w-5" />
+            <img src={value} alt="Preview" className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity backdrop-blur-[2px]">
+              <div className="bg-white rounded-full p-3 shadow-xl">
+                <Upload className="text-zinc-900 h-5 w-5" />
+              </div>
             </div>
           </>
         ) : (
-          <div className="flex flex-col items-center gap-2 text-gray-300 group-hover:text-orange-600 transition-colors">
-            <ImageIcon className="h-5 w-5" />
-            <span className="text-[10px] uppercase font-bold tracking-tighter">Ajouter</span>
+          <div className="flex flex-col items-center gap-3 text-zinc-400 group-hover:text-zinc-600 transition-colors">
+            <div className="p-4 rounded-full bg-white shadow-sm border border-zinc-100">
+               <ImageIcon className="h-6 w-6" />
+            </div>
+            <span className="text-sm font-medium">Ajouter une image</span>
           </div>
         )}
       </div>
     </div>
-  )
+  );
 }
 
 // --- PAGE PRINCIPALE ---
 export default function ShowcaseOnboardingPage() {
-  const supabase = createClient()
-  const router = useRouter()
+  const supabase = createClient();
+  const router = useRouter();
   
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [status, setStatus] = useState<{ type: 'success' | 'error', msg: string } | null>(null)
-  const [currentStep, setCurrentStep] = useState<number>(3)
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState<{ type: 'success' | 'error', msg: string } | null>(null);
+  const [currentStep, setCurrentStep] = useState<number>(3);
 
   const [form, setForm] = useState({
     name: '',
-    type: '', // Ajouté pour corriger la contrainte NOT NULL
+    type: '',
     description: '',
     phone: '',
     website: '',
     logo_url: '',
     banner_url: '',
-  })
+  });
 
   useEffect(() => {
     const fetchData = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return setLoading(false)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return setLoading(false);
 
       const [proRes, profileRes] = await Promise.all([
         supabase.from('professionals').select('*').eq('owner_id', user.id).single(),
         supabase.from('profiles').select('onboarding_step').eq('id', user.id).single()
-      ])
+      ]);
 
       if (proRes.data) {
         setForm({
           name: proRes.data.name ?? '',
-          type: proRes.data.type ?? '', // On récupère le type déjà enregistré
+          type: proRes.data.type ?? '',
           description: proRes.data.description ?? '',
           phone: proRes.data.phone ?? '',
           website: proRes.data.website ?? '',
           logo_url: proRes.data.logo_url ?? '',
           banner_url: proRes.data.banner_url ?? '',
-        })
+        });
       }
-      if (profileRes.data) setCurrentStep(profileRes.data.onboarding_step ?? 3)
-      setLoading(false)
-    }
-    fetchData()
-  }, [supabase])
+      if (profileRes.data) setCurrentStep(profileRes.data.onboarding_step ?? 3);
+      setLoading(false);
+    };
+    fetchData();
+  }, [supabase]);
 
   const handleUpload = async (file: File, field: 'logo_url' | 'banner_url') => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
       
-      const fileExt = file.name.split('.').pop()
-      const path = `${user.id}/${field}-${Date.now()}.${fileExt}`
+      const fileExt = file.name.split('.').pop();
+      const path = `${user.id}/${field}-${Date.now()}.${fileExt}`;
       
       const { error: uploadError } = await supabase.storage
         .from('company-assets')
-        .upload(path, file, { upsert: true })
+        .upload(path, file, { upsert: true });
 
-      if (uploadError) throw uploadError
+      if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
         .from('company-assets')
-        .getPublicUrl(path)
+        .getPublicUrl(path);
 
-      setForm(prev => ({ ...prev, [field]: publicUrl }))
+      setForm(prev => ({ ...prev, [field]: publicUrl }));
     } catch (error: any) {
-      setStatus({ type: 'error', msg: "Erreur upload : " + error.message })
+      setStatus({ type: 'error', msg: "Erreur lors de l'envoi de l'image" });
     }
-  }
+  };
 
   const onSave = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setStatus(null)
+    e.preventDefault();
+    setStatus(null);
     
     if (!form.description.trim() || !form.logo_url) {
-      return setStatus({ type: 'error', msg: "Logo et description requis pour valider votre vitrine." })
+      return setStatus({ type: 'error', msg: "Le logo et la description sont requis." });
     }
 
-    setSaving(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return setSaving(false)
+    setSaving(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return setSaving(false);
 
-    // UPSERT : On inclut explicitement 'type' pour éviter l'erreur NOT NULL
     const { error: proError } = await supabase.from('professionals').upsert({ 
       owner_id: user.id, 
       name: form.name,
-      type: form.type, // Champ critique
+      type: form.type,
       description: form.description,
       phone: form.phone,
       website: form.website,
       logo_url: form.logo_url,
       banner_url: form.banner_url,
       updated_at: new Date().toISOString() 
-    }, { onConflict: 'owner_id' })
+    }, { onConflict: 'owner_id' });
 
-    const nextStep = currentStep >= 5 ? currentStep : 4
-    if (!proError && currentStep < 5) {
-      await supabase.from('profiles').update({ onboarding_step: nextStep }).eq('id', user.id)
-    }
-
-    if (proError) {
-      console.error("Erreur SQL:", proError)
-      setStatus({ type: 'error', msg: "Erreur lors de la sauvegarde : " + proError.message })
+    if (!proError) {
+      const nextStep = currentStep >= 5 ? currentStep : 4;
+      await supabase.from('profiles').update({ onboarding_step: nextStep }).eq('id', user.id);
+      router.push('/dashboard/onboarding');
     } else {
-      setStatus({ type: 'success', msg: "Vitrine validée. Redirection..." })
-      setTimeout(() => router.push('/dashboard/onboarding'), 1500)
+      setStatus({ type: 'error', msg: "Une erreur est survenue lors de la sauvegarde." });
+      setSaving(false);
     }
-    setSaving(false)
-  }
+  };
 
-  const minimalInput = "rounded-none border-0 border-b border-gray-200 focus-visible:ring-0 focus-visible:border-gray-900 px-0 h-10 transition-colors bg-transparent shadow-none"
+  const inputStyle = "h-[56px] rounded-xl border-zinc-300 focus:border-black focus:ring-1 focus:ring-black text-lg px-4 transition-all bg-white";
+  const labelStyle = "text-sm font-medium text-zinc-500 mb-2 block";
 
-  if (loading) return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin text-gray-900" /></div>
+  if (loading) return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin text-zinc-900" /></div>;
 
   return (
-    <div className="p-6 md:p-12 w-full max-w-5xl mx-auto bg-white min-h-screen font-sans">
+    <div className="max-w-3xl mx-auto px-6 pt-16 pb-24 min-h-screen bg-white text-[#222222]">
       
-      <Link href="/dashboard/onboarding" className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-gray-400 hover:text-black transition-colors mb-12 group">
-        <ArrowLeft size={12} className="group-hover:-translate-x-1 transition-transform" />
-        Retour au tracker
+      <Link href="/dashboard/onboarding" className="inline-flex p-2 -ml-2 rounded-full hover:bg-zinc-100 transition-colors mb-8">
+        <ArrowLeft size={20} strokeWidth={2.5} />
       </Link>
 
-      <div className="mb-20 border-b border-gray-100 pb-8 text-left">
-        <div className="flex items-center gap-3 mb-2 text-gray-400">
-          <Store className="h-4 w-4" />
-          <p className="text-[10px] tracking-[0.3em] uppercase font-bold">
-            {currentStep >= 5 ? "Marketing & Vitrine" : "Étape 03"}
-          </p>
-        </div>
-        <h1 className="text-4xl font-light tracking-tight text-gray-900 italic">Identité Visuelle</h1>
+      <div className="mb-12">
+        <h1 className="text-[32px] font-semibold leading-[36px] tracking-tight">
+          Vitrine de l'agence
+        </h1>
+        <p className="text-zinc-500 mt-3 text-lg">
+          Personnalisez l'apparence de votre profil public pour attirer plus de clients.
+        </p>
       </div>
 
-      <form onSubmit={onSave} className="space-y-24">
+      <form onSubmit={onSave} className="space-y-12">
         
-        {/* SECTION 1: VISUELS */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-12">
-          <div className="md:col-span-1">
-            <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-2">Visuels</h3>
-            <p className="text-xs text-gray-400 leading-relaxed italic border-l border-gray-100 pl-4">
-              "Ces éléments définissent votre image de marque auprès des acquéreurs."
-            </p>
-          </div>
-          <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-8 items-start">
-            <FileDropzone label="Logo Agence *" value={form.logo_url} onUpload={(f) => handleUpload(f, 'logo_url')} />
-            <div className="sm:col-span-2">
-              <FileDropzone label="Bannière Vitrine" value={form.banner_url} onUpload={(f) => handleUpload(f, 'banner_url')} aspect="video" />
+        {/* VISUELS */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+          <FileDropzone 
+            label="Logo de l'agence *" 
+            description="Format carré recommandé (PNG, JPG)"
+            value={form.logo_url} 
+            onUpload={(f) => handleUpload(f, 'logo_url')} 
+          />
+          <FileDropzone 
+            label="Bannière de couverture" 
+            description="S'affiche en haut de votre vitrine"
+            value={form.banner_url} 
+            onUpload={(f) => handleUpload(f, 'banner_url')} 
+            aspect="video" 
+          />
+        </div>
+
+        <div className="py-2 border-b border-zinc-200" />
+
+        {/* À PROPOS */}
+        <div className="space-y-2">
+          <label className={labelStyle}>Présentation de l'agence *</label>
+          <Textarea 
+            className="rounded-xl border-zinc-300 focus-visible:ring-black p-4 min-h-[160px] text-lg leading-relaxed shadow-none bg-white"
+            value={form.description}
+            onChange={e => setForm({...form, description: e.target.value})}
+            placeholder="Décrivez votre expertise, votre histoire et vos valeurs..."
+            required
+          />
+        </div>
+
+        {/* CONTACTS PUBLICS */}
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className={labelStyle}>Nom affiché</label>
+              <Input 
+                className={inputStyle} 
+                value={form.name} 
+                onChange={e => setForm({...form, name: e.target.value})} 
+                placeholder="Nom commercial"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className={labelStyle}>Téléphone de contact</label>
+              <Input 
+                className={inputStyle} 
+                value={form.phone} 
+                onChange={e => setForm({...form, phone: e.target.value})} 
+                placeholder="01 02 03 04 05"
+              />
             </div>
           </div>
-        </section>
-
-        {/* SECTION 2: DESCRIPTION */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-12 border-t border-gray-50 pt-16">
-          <div className="md:col-span-1">
-            <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-2">À propos</h3>
-            <p className="text-xs text-gray-400 leading-relaxed italic border-l border-gray-100 pl-4">
-              "Décrivez votre expertise et vos secteurs de prédilection."
-            </p>
-          </div>
-          <div className="md:col-span-2 space-y-2">
-            <Label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Biographie de l'agence *</Label>
-            <Textarea 
-              className="rounded-none border border-gray-100 focus-visible:ring-0 focus-visible:border-gray-900 p-6 min-h-[180px] resize-none text-sm leading-relaxed italic shadow-none bg-gray-50/30"
-              value={form.description}
-              onChange={e => setForm({...form, description: e.target.value})}
-              placeholder="Ex: Spécialiste de l'immobilier de prestige depuis 1998..."
+          <div className="space-y-2">
+            <label className={labelStyle}>Site internet</label>
+            <Input 
+              className={inputStyle} 
+              value={form.website} 
+              onChange={e => setForm({...form, website: e.target.value})} 
+              placeholder="https://www.votre-agence.com" 
             />
           </div>
-        </section>
+        </div>
 
-        {/* SECTION 3: INFOS PUBLIQUES */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-12 border-t border-gray-50 pt-16">
-          <div className="md:col-span-1">
-            <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-2">Contacts Publics</h3>
-            <p className="text-xs text-gray-400 leading-relaxed italic border-l border-gray-100 pl-4">
-              Ces informations seront affichées sur vos annonces.
-            </p>
+        {/* STATUS MESSAGES */}
+        {status && (
+          <div className={cn(
+            "p-4 rounded-xl flex items-center gap-3 text-sm font-medium animate-in fade-in slide-in-from-top-1",
+            status.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+          )}>
+            {status.type === 'success' ? <Check className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+            {status.msg}
           </div>
-          <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-12">
-            <div className="space-y-2">
-              <Label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Nom commercial</Label>
-              <Input className={minimalInput} value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Téléphone contact</Label>
-              <Input className={minimalInput} value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} />
-            </div>
-            <div className="sm:col-span-2 space-y-2">
-              <Label className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Site internet</Label>
-              <Input className={minimalInput} value={form.website} onChange={e => setForm({...form, website: e.target.value})} placeholder="https://..." />
-            </div>
-          </div>
-        </section>
+        )}
 
         {/* ACTIONS */}
-        <div className="pt-10 border-t border-gray-900 border-opacity-10 flex flex-col items-end gap-6 pb-20">
-          {status && (
-            <div className={cn(
-              "flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider",
-              status.type === 'success' ? 'text-orange-600' : 'text-rose-600'
-            )}>
-              {status.type === 'success' ? <Check className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-              {status.msg}
-            </div>
-          )}
+        <div className="pt-8 border-t border-zinc-100 flex flex-col sm:flex-row items-center justify-between gap-6">
+          <p className="text-xs text-zinc-500 max-w-xs text-center sm:text-left italic">
+            * Ces informations seront visibles par les utilisateurs sur vos annonces publiques.
+          </p>
           <Button 
             type="submit" 
-            className="w-full md:w-auto h-16 px-16 bg-gray-900 hover:bg-orange-600 text-white rounded-none text-[10px] font-bold uppercase tracking-[0.3em] transition-all shadow-2xl group" 
             disabled={saving}
+            className="w-full sm:w-auto min-w-[240px] h-[54px] bg-[#222222] hover:bg-black text-white rounded-xl text-base font-semibold shadow-none transition-all active:scale-[0.98]"
           >
-            {saving ? <Loader2 className="animate-spin h-4 w-4" /> : (
-              <span className="flex items-center gap-3">
-                Continuer vers l'abonnement <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            {saving ? <Loader2 className="animate-spin h-5 w-5" /> : (
+              <span className="flex items-center gap-2">
+                Enregistrer et continuer <ArrowRight size={18} />
               </span>
             )}
           </Button>
         </div>
       </form>
     </div>
-  )
+  );
 }
