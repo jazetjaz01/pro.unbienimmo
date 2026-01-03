@@ -7,85 +7,105 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2024-12-18.acacia" as any,
 });
 
-const PRICE_IDS: Record<string, string> = {
-  essentiel: process.env.STRIPE_PRICE_ID_ESSENTIEL!,
-  professionnel: process.env.STRIPE_PRICE_ID_PRO!,
-  expert: process.env.STRIPE_PRICE_ID_EXPERT!,
-};
-
 export async function POST(req: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-
     const { packId } = await req.json();
-    const priceId = PRICE_IDS[packId];
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pro.unbienimmo.com";
+    const supabase = await createClient();
+    
+    // 1. Récupération de l'utilisateur connecté
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Session expirée, veuillez vous reconnecter" }, { status: 401 });
+    }
 
-    // 1. Récupérer les infos pro dans la table 'professionals'
+    // 2. Client Admin pour contourner les RLS
     const supabaseAdmin = createAdminClient();
-    const { data: prof, error: profError } = await supabaseAdmin
+
+    // 3. Tentative de récupération du profil professionnel
+    let { data: prof, error: profError } = await supabaseAdmin
       .from("professionals")
-      .select("*")
-      .eq("owner_id", user.id) // Utilisation de owner_id selon votre schéma
-      .single();
+      .select("id, stripe_customer_id")
+      .eq("owner_id", user.id)
+      .maybeSingle();
 
-    if (profError || !prof) {
-      return NextResponse.json({ error: "Profil professionnel introuvable" }, { status: 400 });
-    }
-
-    let stripeCustomerId = prof.stripe_customer_id;
-
-    // 2. Créer ou mettre à jour le client Stripe avec vos données Supabase
-    if (!stripeCustomerId) {
-      const customer = await stripe.customers.create({
-        email: prof.email || user.email,
-        name: prof.legal_name || prof.name, // Nom légal pour la facture
-        address: {
-          line1: prof.street_address,
-          city: prof.city,
-          postal_code: prof.zip_code,
-          country: prof.country || "FR",
-        },
-        metadata: {
-          supabase_prof_id: prof.id,
-        },
-      });
-      stripeCustomerId = customer.id;
-
-      // Optionnel : Sauvegarder immédiatement l'ID dans Supabase
-      await supabaseAdmin
+    // 4. AUTO-CRÉATION (avec sécurité sur l'email)
+    if (!prof) {
+      // Sécurité : Si l'email est manquant dans l'objet user, on crée un fallback
+      // pour éviter l'erreur "column email contains null values"
+      const safeEmail = user.email || `pro_${user.id.slice(0, 8)}@unbienimmo.local`;
+      
+      console.log("🛠️ Création du profil pro pour l'utilisateur:", user.id, "avec l'email:", safeEmail);
+      
+      const { data: newProf, error: createError } = await supabaseAdmin
         .from("professionals")
-        .update({ stripe_customer_id: stripeCustomerId })
-        .eq("id", prof.id);
+        .insert([{ 
+          owner_id: user.id,
+          email: safeEmail,
+          subscription_status: 'trialing' 
+        }])
+        .select()
+        .single();
+
+      if (createError || !newProf) {
+        console.error("❌ ERREUR SUPABASE (Insertion):", createError?.message);
+        return NextResponse.json({ 
+          error: `Base de données : ${createError?.message || "Échec de création du profil pro"}` 
+        }, { status: 500 });
+      }
+      
+      prof = newProf;
     }
 
-    // 3. Créer la session Checkout
+    // 5. VÉRIFICATION TYPESCRIPT
+    if (!prof || !prof.id) {
+      return NextResponse.json({ error: "Données de profil introuvables." }, { status: 500 });
+    }
+
+    // 6. Mapping des Price IDs
+    const PRICE_IDS: Record<string, string | undefined> = {
+      essentiel: process.env.STRIPE_PRICE_ID_ESSENTIEL,
+      professionnel: process.env.STRIPE_PRICE_ID_PRO,
+      expert: process.env.STRIPE_PRICE_ID_EXPERT,
+    };
+
+    const priceId = PRICE_IDS[packId];
+
+    if (!priceId) {
+      console.error("❌ Price ID introuvable pour le pack:", packId);
+      return NextResponse.json({ error: "Ce pack n'est pas encore configuré dans Stripe." }, { status: 400 });
+    }
+
+    // 7. Création de la session Checkout Stripe
+    console.log("💳 Lancement de Stripe Checkout pour profId:", prof.id);
+    
+    // On définit l'email pour Stripe
+    const customerEmail = user.email || undefined;
+
     const session = await stripe.checkout.sessions.create({
-      customer: stripeCustomerId,
+      // Si on a déjà un client Stripe (stripe_customer_id), on l'utilise
+      // sinon on passe l'email pour que Stripe crée le client
+      customer: prof.stripe_customer_id || undefined,
+      customer_email: prof.stripe_customer_id ? undefined : customerEmail,
+      
       line_items: [{ price: priceId, quantity: 1 }],
       mode: "subscription",
-      success_url: `${baseUrl}/dashboard/onboarding/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/dashboard/onboarding/plan`,
-      
-      // Paramètres pour une facture légale en France
-      automatic_tax: { enabled: true },
-      billing_address_collection: "auto", // Utilise l'adresse déjà fournie
-      tax_id_collection: { enabled: true }, // Permet de saisir la TVA si absente
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/onboarding/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/onboarding/subscription`,
       
       metadata: {
         userId: user.id,
-        profId: prof.id,
-        packId: packId,
+        profId: String(prof.id), 
+        packId: packId
       },
     });
 
     return NextResponse.json({ url: session.url });
 
   } catch (error: any) {
-    console.error("STRIPE_ERROR:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("🚨 ERREUR STRIPE API:", error.message);
+    return NextResponse.json(
+      { error: `Erreur Stripe : ${error.message}` },
+      { status: 500 }
+    );
   }
 }

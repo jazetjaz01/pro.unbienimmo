@@ -6,7 +6,7 @@ export async function updateSession(request: NextRequest) {
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, // ✅ UTILISEZ LA CLÉ ANON ICI
     {
       cookies: {
         getAll() { return request.cookies.getAll() },
@@ -21,6 +21,7 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
+  // IMPORTANT: Ne pas utiliser de destructuration directe ici pour éviter les erreurs si data est null
   const { data: { user } } = await supabase.auth.getUser()
   const pathname = request.nextUrl.pathname
 
@@ -29,14 +30,20 @@ export async function updateSession(request: NextRequest) {
   const isOnboardingChoicePage = pathname === '/onboarding/choice'
   const isJoinAgencyPage = pathname === '/auth/join-agency'
   const isAccessDeniedPage = pathname === '/access-denied'
+  const isPublicPage = pathname === '/'
 
-  // 2. LOGIQUE DE SÉCURITÉ DE BASE : Non connecté
-  if (!user && !isAuthPage && !isAccessDeniedPage) {
+  // 2. LOGIQUE DE SÉCURITÉ : Utilisateur non connecté
+  if (!user && !isAuthPage && !isPublicPage && !isAccessDeniedPage) {
     return NextResponse.redirect(new URL('/auth/login', request.url))
   }
 
   // 3. LOGIQUE POUR UTILISATEUR CONNECTÉ
-  if (user && !isAuthPage) {
+  if (user) {
+    // Vérifier si nous sommes sur une page d'auth en étant connecté
+    if (isAuthPage) {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+
     const { data: profile } = await supabase
       .from('profiles')
       .select('is_pro, is_admin, onboarding_step')
@@ -45,39 +52,41 @@ export async function updateSession(request: NextRequest) {
 
     const step = profile?.onboarding_step || 0
 
-    // A. GESTION DU NOUVEL UTILISATEUR (STEP 0)
-    // On l'autorise à aller sur la page de choix ou la page agent, même s'il n'est pas encore "is_pro"
+    // A. NOUVEL UTILISATEUR (STEP 0)
     if (step === 0) {
       if (!isOnboardingChoicePage && !isJoinAgencyPage && !isAccessDeniedPage) {
         return NextResponse.redirect(new URL('/onboarding/choice', request.url))
       }
-      return supabaseResponse // On le laisse accéder à Choice ou Join-Agency
-    }
-
-    // B. SÉCURITÉ STRICTE (Après le choix du rôle)
-    // Une fois que l'utilisateur a commencé son onboarding (step > 0), 
-    // il doit être pro ou admin pour continuer
-    if (!profile?.is_pro && !profile?.is_admin) {
-      if (!isAccessDeniedPage) {
-        return NextResponse.redirect(new URL('https://unbienimmo.com/access-denied', request.url))
-      }
       return supabaseResponse
     }
 
-    // C. LOGIQUE D'ONBOARDING PATRON (STEP 1)
-    if (profile.is_pro && !profile.is_admin) {
-      const isOnboardingFormPage = pathname === '/dashboard/onboarding'
-      const isInsideDashboard = pathname.startsWith('/dashboard')
+    // B. GESTION DES ACCÈS (DASHBOARD & ONBOARDING)
+    const isInsideDashboard = pathname.startsWith('/dashboard')
+    const isOnboardingProcess = pathname.startsWith('/dashboard/onboarding')
 
-      // Rediriger vers le formulaire de création d'agence si step 1
-      if (isInsideDashboard && !isOnboardingFormPage && step === 1) {
+    // On autorise si : pro OU admin OU en train de faire l'onboarding
+    const hasAccessPermission = profile?.is_pro || profile?.is_admin || isOnboardingProcess
+
+    if (isInsideDashboard && !hasAccessPermission) {
+      return NextResponse.redirect(new URL('/access-denied', request.url))
+    }
+
+    // C. LOGIQUE DE REDIRECTION PAR ÉTAPE
+    if (isInsideDashboard) {
+      // Force le formulaire si step 1
+      if (step === 1 && !isOnboardingProcess) {
         return NextResponse.redirect(new URL('/dashboard/onboarding', request.url))
       }
 
-      // Protection : Empêcher de retourner sur les pages d'onboarding si fini (step >= 2)
-      if (step >= 2 && (isOnboardingFormPage || isOnboardingChoicePage || isJoinAgencyPage)) {
+      // Empêche le retour à l'onboarding si fini (ex: après step 4 ou 5 selon votre logique)
+      if (step >= 5 && isOnboardingProcess) {
         return NextResponse.redirect(new URL('/dashboard', request.url))
       }
+    }
+    
+    // Empêcher l'accès à la page de choix si déjà fait
+    if (step > 0 && isOnboardingChoicePage) {
+       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
   }
 
