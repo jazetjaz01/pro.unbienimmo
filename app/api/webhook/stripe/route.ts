@@ -14,7 +14,8 @@ export async function POST(req: Request) {
   const body = await req.text();
 
   // 2. Récupération de la signature Stripe
-  const signature = headers().get("stripe-signature");
+  const signature = req.headers.get("stripe-signature");
+
 
   if (!signature) {
     console.error("❌ Signature Stripe absente");
