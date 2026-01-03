@@ -9,35 +9,40 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(req: Request) {
   const body = await req.text();
-  const signature = (await headers()).get("stripe-signature") as string;
+  const signature = (await headers()).get("stripe-signature");
+
+  if (!signature) {
+    return new NextResponse("No signature", { status: 400 });
+  }
 
   let event: Stripe.Event;
 
   try {
     event = stripe.webhooks.constructEvent(
-      body, 
-      signature, 
+      body,
+      signature,
       process.env.STRIPE_WEBHOOK_SECRET!
     );
   } catch (err: any) {
-    console.error(`❌ Erreur Webhook Stripe: ${err.message}`);
+    console.error(`❌ Erreur de signature Webhook: ${err.message}`);
     return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
   }
 
   const supabase = createAdminClient();
 
+  // Traitement de l'événement
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
     
-    // On extrait les metadata exactement comme dans votre JSON
+    // Extraction précise selon votre JSON
     const userId = session.metadata?.userId;
     const profId = session.metadata?.profId;
     const packId = session.metadata?.packId;
 
-    if (userId && profId) {
-      console.log(`🚀 Traitement du paiement pour l'utilisateur: ${userId}`);
+    console.log("🔔 Webhook Checkout Reçu :", { userId, profId, packId });
 
-      // 1. Mise à jour du profil (Étape finale)
+    if (userId && profId) {
+      // 1. Mise à jour de la table PROFILES
       const { error: errorProfile } = await supabase
         .from("profiles")
         .update({ 
@@ -46,7 +51,10 @@ export async function POST(req: Request) {
         })
         .eq("id", userId);
 
-      // 2. Mise à jour de la table "professionals"
+      if (errorProfile) console.error("❌ Erreur Profile Update:", errorProfile);
+
+      // 2. Mise à jour de la table PROFESSIONALS
+      // Note : on remplit aussi 'legal_name' avec le nom de facturation Stripe
       const { error: errorProf } = await supabase
         .from("professionals")
         .update({ 
@@ -54,15 +62,18 @@ export async function POST(req: Request) {
           subscription_status: 'active',
           subscription_plan: packId,
           is_active: true,
+          legal_name: session.customer_details?.name || null,
           updated_at: new Date().toISOString()
         })
-        .eq("id", profId); // On utilise l'ID de la table professionals
+        .eq("id", profId);
 
-      if (errorProfile || errorProf) {
-        console.error("❌ Erreur Supabase:", { errorProfile, errorProf });
-      } else {
-        console.log("✅ Base de données mise à jour avec succès !");
+      if (errorProf) console.error("❌ Erreur Professionals Update:", errorProf);
+
+      if (!errorProfile && !errorProf) {
+        console.log("✅ BRAVO : Les tables sont synchronisées !");
       }
+    } else {
+      console.error("⚠️ Metadata manquantes dans la session Stripe.");
     }
   }
 
