@@ -81,18 +81,18 @@ export async function POST(req: Request) {
   // jointure correcte = owner_id
   // -------------------------
   const { data: professionalData, error: professionalError } =
-    await supabase
-      .from("professionals")
-      .update({
-        stripe_customer_id: session.customer as string,
-        subscription_status: "active",
-        subscription_plan: packId,
-        is_active: true,
-        legal_name: session.customer_details?.name || null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("owner_id", userId)
-      .select();
+  await supabase
+    .from("professionals")
+    .upsert({
+      owner_id: userId, // La clé pour trouver/créer
+      stripe_customer_id: session.customer as string,
+      subscription_status: "active",
+      subscription_plan: packId,
+      is_active: true,
+      legal_name: session.customer_details?.name || null,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'owner_id' }) // On se base sur owner_id pour savoir si on crée ou update
+    .select();
 
   console.log(
     "🏢 PROFESSIONAL UPDATE:",
