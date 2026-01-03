@@ -14,66 +14,99 @@ export async function POST(req: Request) {
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(body, signature, process.env.STRIPE_WEBHOOK_SECRET!);
+    // Vérification que la requête vient bien de Stripe
+    event = stripe.webhooks.constructEvent(
+      body, 
+      signature, 
+      process.env.STRIPE_WEBHOOK_SECRET!
+    );
   } catch (error: any) {
-    console.error("❌ Erreur Signature Webhook:", error.message);
+    console.error(`❌ Erreur Signature Webhook: ${error.message}`);
     return new NextResponse(`Webhook Error: ${error.message}`, { status: 400 });
   }
 
   const supabase = createAdminClient();
 
-  switch (event.type) {
-    case "checkout.session.completed": {
-      const session = event.data.object as Stripe.Checkout.Session;
-      const { userId, profId, packId } = session.metadata || {};
+  try {
+    switch (event.type) {
+      /**
+       * ÉVÉNEMENT : Paiement réussi (Premier achat ou abonnement)
+       */
+      case "checkout.session.completed": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const { userId, profId, packId } = session.metadata || {};
 
-      if (userId && profId) {
-        console.log(`✅ Session complétée pour l'utilisateur ${userId}`);
+        if (userId && profId) {
+          console.log(`✅ Paiement validé pour profId: ${profId}`);
 
-        // 1. Mise à jour de la table professionals
-        const { error: profError } = await supabase
+          // 1. Mise à jour de la table "professionals"
+          const { error: profError } = await supabase
+            .from("professionals")
+            .update({ 
+              stripe_customer_id: session.customer as string,
+              subscription_status: "active",
+              subscription_plan: packId, // Ex: 'expert', 'professionnel'
+              is_active: true,
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", profId);
+
+          if (profError) throw new Error(`Erreur Professionals: ${profError.message}`);
+
+          // 2. Mise à jour du profil pour débloquer l'accès au Dashboard (Step 5)
+          const { error: profileError } = await supabase
+            .from("profiles")
+            .update({ 
+              onboarding_step: 5, 
+              is_pro: true 
+            })
+            .eq("id", userId);
+
+          if (profileError) throw new Error(`Erreur Profile: ${profileError.message}`);
+        }
+        break;
+      }
+
+      /**
+       * ÉVÉNEMENT : Facture payée (Renouvellement d'abonnement)
+       */
+      case "invoice.paid": {
+        const invoice = event.data.object as Stripe.Invoice;
+        
+        // On utilise l'ID client de Stripe pour retrouver le pro
+        await supabase
+          .from("professionals")
+          .update({
+            subscription_status: "active",
+            is_active: true,
+            updated_at: new Date().toISOString()
+          })
+          .eq("stripe_customer_id", invoice.customer as string);
+        break;
+      }
+
+      /**
+       * ÉVÉNEMENT : Échec de paiement ou désabonnement
+       */
+      case "invoice.payment_failed":
+      case "customer.subscription.deleted": {
+        const sessionOrInvoice = event.data.object as any;
+        
+        await supabase
           .from("professionals")
           .update({ 
-            stripe_customer_id: session.customer as string,
-            subscription_status: "active",
-            subscription_plan: packId, // On récupère le packId des metadata
-            is_active: true
+            subscription_status: "past_due", 
+            is_active: false 
           })
-          .eq("id", profId);
-
-        if (profError) console.error("❌ Erreur Update Professional:", profError.message);
-
-        // 2. Mise à jour du profil (On passe à l'étape 5 pour finaliser)
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .update({ 
-            onboarding_step: 5, // Passez à 5 pour marquer la fin
-            is_pro: true 
-          })
-          .eq("id", userId);
-
-        if (profileError) console.error("❌ Erreur Update Profile:", profileError.message);
+          .eq("stripe_customer_id", sessionOrInvoice.customer as string);
+        break;
       }
-      break;
     }
 
-    case "invoice.paid": {
-      const invoice = event.data.object as Stripe.Invoice;
-      // Correction TypeScript : on récupère les metadata directement sur l'invoice
-      // ou via les lignes de facture (lines)
-      const packId = invoice.metadata?.packId;
+    return NextResponse.json({ received: true }, { status: 200 });
 
-      await supabase
-        .from("professionals")
-        .update({
-          subscription_status: "active",
-          is_active: true,
-          updated_at: new Date().toISOString()
-        })
-        .eq("stripe_customer_id", invoice.customer as string);
-      break;
-    }
+  } catch (err: any) {
+    console.error("🚨 Erreur lors du traitement du Webhook:", err.message);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
-
-  return new NextResponse(JSON.stringify({ received: true }), { status: 200 });
 }
