@@ -67,7 +67,8 @@ export async function updateSession(request: NextRequest) {
 
     const isInsideDashboard = pathname.startsWith('/dashboard')
     const isOnboardingProcess = pathname.startsWith('/dashboard/onboarding')
-    const hasAccessPermission = profile?.is_pro || profile?.is_admin || isOnboardingProcess
+    const isSuccessPage = pathname === '/dashboard/onboarding/success' // 👈 Ajoutez ceci
+    const hasAccessPermission = profile?.is_pro || profile?.is_admin || isOnboardingProcess || isSuccessPage
 
     if (isInsideDashboard && !hasAccessPermission) {
       return NextResponse.redirect(new URL('/access-denied', request.url))
