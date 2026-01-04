@@ -16,11 +16,12 @@ const Navbar = () => {
             <span className=" text-lg  hidden md:block  font-semibold">pro.</span>
             <span className=" text-lg  hidden md:block font-semibold">unbienimmo</span>
             </div>
-          {/* Desktop Menu */}
-          <NavMenu className="hidden md:block" />
+          
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Desktop Menu */}
+          <NavMenu className="hidden md:block" />
          <AuthButton />
 
           {/* Mobile Menu */}

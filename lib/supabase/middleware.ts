@@ -32,7 +32,10 @@ export async function updateSession(request: NextRequest) {
 
   // 2. DÉFINITION DES ZONES
   const isAuthPage = pathname.startsWith('/auth') || pathname.startsWith('/login')
-  const isPublicPage = pathname === '/' || pathname.startsWith('/public')
+  const isPublicPage = 
+    pathname === '/' || 
+    pathname.startsWith('/public') || 
+    pathname === '/contact' // <-- Ajouté ici
   const isAccessDeniedPage = pathname === '/access-denied'
   const isInsideDashboard = pathname.startsWith('/dashboard')
   const isOnboardingProcess = pathname.startsWith('/dashboard/onboarding')
