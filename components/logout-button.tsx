@@ -11,7 +11,8 @@ export function LogoutButton() {
     const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/auth/login')
+    router.refresh()
   }
 
-  return <Button onClick={logout}>Logout</Button>
+  return <Button onClick={logout}>Deconnexion</Button>
 }

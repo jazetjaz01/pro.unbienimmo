@@ -5,27 +5,40 @@ import { cn } from "@/lib/utils";
 
 export async function AuthButton() {
   const supabase = await createClient();
-  const { data } = await supabase.auth.getClaims();
-  const user = data?.claims;
+  
+  // 1. Récupération de l'utilisateur
+  const { data: { user } } = await supabase.auth.getUser();
 
-  // Ton style exact du NavMenu
-  const minimalStyle = "group inline-flex h-10 w-max items-center justify-center px-4 py-2 text-[10px] uppercase tracking-[0.2em] font-bold text-gray-500 hover:text-gray-900 transition-colors bg-transparent relative after:absolute after:bottom-1 after:left-4 after:right-4 after:h-px after:bg-gray-900 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:origin-left";
+  // 2. Si connecté, on récupère le profil
+  let displayName = user?.email;
+  
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('first_name')
+      .eq('id', user.id)
+      .single();
+
+    if (profile?.first_name) {
+      displayName = profile.first_name;
+    }
+  }
+
+  // Style minimaliste Airbnb (minuscules, texte gris foncé, propre)
+  const minimalStyle = "group inline-flex h-10 w-max items-center justify-center px-4 py-2 text-sm font-medium text-[#222222] hover:bg-[#F7F7F7] rounded-full transition-all";
 
   return user ? (
-    <div className="flex items-center gap-6">
-      <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-gray-400">
-        {user.email}
+    <div className="flex items-center gap-4">
+      <span className="text-sm font-medium text-[#222222] lowercase">
+        {displayName}
       </span>
       <LogoutButton />
     </div>
   ) : (
-    <div className="flex items-center gap-2">
-      {/* CONNEXION */}
+    <div className="flex items-center gap-1">
       <Link href="/auth/login" className={cn(minimalStyle)}>
         Connexion
       </Link>
-
-      {/* INSCRIPTION (Style identique) */}
       <Link href="/auth/sign-up" className={cn(minimalStyle)}>
         Inscription
       </Link>
