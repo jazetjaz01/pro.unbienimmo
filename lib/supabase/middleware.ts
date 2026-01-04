@@ -4,8 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
-  // ✅ EXCEPTION : On laisse passer Stripe sans aucune redirection ni vérification
-  // On vérifie avec et sans le "s" pour être totalement sécurisé
+  // ✅ 1. EXCEPTION WEBHOOKS : On laisse passer Stripe sans aucune vérification
   if (pathname.startsWith('/api/webhook/stripe') || pathname.startsWith('/api/webhooks/stripe')) {
     return NextResponse.next()
   }
@@ -31,24 +30,30 @@ export async function updateSession(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // 1. Définition des zones de navigation
+  // 2. DÉFINITION DES ZONES
   const isAuthPage = pathname.startsWith('/auth') || pathname.startsWith('/login')
-  const isOnboardingChoicePage = pathname === '/onboarding/choice'
-  const isJoinAgencyPage = pathname === '/auth/join-agency'
+  const isPublicPage = pathname === '/' || pathname.startsWith('/public')
   const isAccessDeniedPage = pathname === '/access-denied'
-  const isPublicPage = pathname === '/'
+  const isInsideDashboard = pathname.startsWith('/dashboard')
+  const isOnboardingProcess = pathname.startsWith('/dashboard/onboarding')
+  const isSuccessPage = pathname === '/dashboard/onboarding/success'
 
-  // 2. LOGIQUE DE SÉCURITÉ : Utilisateur non connecté
-  if (!user && !isAuthPage && !isPublicPage && !isAccessDeniedPage) {
-    return NextResponse.redirect(new URL('/auth/login', request.url))
+  // 3. LOGIQUE UTILISATEUR NON CONNECTÉ
+  if (!user) {
+    if (!isAuthPage && !isPublicPage && !isAccessDeniedPage) {
+      return NextResponse.redirect(new URL('/auth/login', request.url))
+    }
+    return supabaseResponse
   }
 
-  // 3. LOGIQUE POUR UTILISATEUR CONNECTÉ
+  // 4. LOGIQUE UTILISATEUR CONNECTÉ
   if (user) {
+    // Rediriger les gens connectés qui vont sur login/auth vers le dashboard
     if (isAuthPage) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
 
+    // Récupération du profil
     const { data: profile } = await supabase
       .from('profiles')
       .select('is_pro, is_admin, onboarding_step')
@@ -57,33 +62,45 @@ export async function updateSession(request: NextRequest) {
 
     const step = profile?.onboarding_step || 0
 
+    // ✅ EXCEPTION PRIORITAIRE : La page Success
+    // Si l'utilisateur est sur la page de succès, on arrête tout et on affiche la page
+    if (isSuccessPage) {
+      return supabaseResponse
+    }
+
     // A. NOUVEL UTILISATEUR (STEP 0)
     if (step === 0) {
+      const isOnboardingChoicePage = pathname === '/onboarding/choice'
+      const isJoinAgencyPage = pathname === '/auth/join-agency'
+      
       if (!isOnboardingChoicePage && !isJoinAgencyPage && !isAccessDeniedPage) {
         return NextResponse.redirect(new URL('/onboarding/choice', request.url))
       }
       return supabaseResponse
     }
 
-    const isInsideDashboard = pathname.startsWith('/dashboard')
-    const isOnboardingProcess = pathname.startsWith('/dashboard/onboarding')
-    const isSuccessPage = pathname === '/dashboard/onboarding/success' // 👈 Ajoutez ceci
-    const hasAccessPermission = profile?.is_pro || profile?.is_admin || isOnboardingProcess || isSuccessPage
-
-    if (isInsideDashboard && !hasAccessPermission) {
+    // B. PROTECTION DU DASHBOARD (is_pro ou is_admin requis)
+    const hasAccess = profile?.is_pro || profile?.is_admin || isOnboardingProcess
+    if (isInsideDashboard && !hasAccess) {
       return NextResponse.redirect(new URL('/access-denied', request.url))
     }
 
+    // C. GESTION DES ÉTAPES D'ONBOARDING DANS LE DASHBOARD
     if (isInsideDashboard) {
+      // Si l'utilisateur a commencé l'onboarding (step 1) mais n'est pas dans le dossier onboarding
       if (step === 1 && !isOnboardingProcess) {
         return NextResponse.redirect(new URL('/dashboard/onboarding', request.url))
       }
-      if (step >= 5 && isOnboardingProcess) {
+
+      // Si l'onboarding est terminé (step >= 5) et qu'il essaie d'aller sur les pages d'onboarding
+      // SAUF la page success (déjà gérée plus haut)
+      if (step >= 5 && isOnboardingProcess && !isSuccessPage) {
         return NextResponse.redirect(new URL('/dashboard', request.url))
       }
     }
     
-    if (step > 0 && isOnboardingChoicePage) {
+    // Si l'onboarding a commencé, on ne peut plus retourner sur le choix initial
+    if (step > 0 && pathname === '/onboarding/choice') {
        return NextResponse.redirect(new URL('/dashboard', request.url))
     }
   }
