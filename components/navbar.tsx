@@ -9,9 +9,13 @@ const Navbar = () => {
   return (
     <nav className="h-16 bg-background border-b">
       <div className="h-full flex items-center justify-between  mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-12">
+        <div className="flex items-center gap-2">
           <Logo />
-
+            <div className="flex gap-0.5 ">
+              
+            <span className=" text-lg  hidden md:block  font-semibold">pro.</span>
+            <span className=" text-lg  hidden md:block font-semibold">unbienimmo</span>
+            </div>
           {/* Desktop Menu */}
           <NavMenu className="hidden md:block" />
         </div>
